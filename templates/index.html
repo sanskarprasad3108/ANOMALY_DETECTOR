@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dump Truck Anomaly Detection</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #0f0f23 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 300px 1fr 320px;
+            grid-template-rows: auto 1fr;
+            gap: 15px;
+            padding: 15px;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: rgba(20, 20, 40, 0.8);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .title h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(90deg, #00ff88, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+        }
+
+        .title-icon {
+            font-size: 2rem;
+        }
+
+        /* Status Section */
+        .status-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .system-status {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 25px;
+            border-radius: 10px;
+            min-width: 200px;
+        }
+
+        .status-label {
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .status-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .status-normal {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(0, 200, 100, 0.1));
+            border: 2px solid #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .status-normal .status-value {
+            color: #00ff88;
+        }
+
+        .status-anomaly {
+            background: linear-gradient(135deg, rgba(255, 68, 68, 0.3), rgba(200, 50, 50, 0.1));
+            border: 2px solid #ff4444;
+            box-shadow: 0 0 30px rgba(255, 68, 68, 0.5);
+            animation: pulse-red 0.5s ease-in-out infinite;
+        }
+
+        .status-anomaly .status-value {
+            color: #ff4444;
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 68, 68, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(255, 68, 68, 0.8); }
+        }
+
+        /* Metrics Display */
+        .metrics {
+            display: flex;
+            gap: 15px;
+        }
+
+        .metric-box {
+            background: rgba(30, 30, 50, 0.8);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 0.7rem;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .metric-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Left Panel */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            background: rgba(20, 20, 40, 0.9);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .panel-title {
+            font-size: 1rem;
+            color: #00d4ff;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+            padding-bottom: 10px;
+        }
+
+        .control-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-normal {
+            background: linear-gradient(135deg, #00aa55, #00ff88);
+            color: #000;
+        }
+
+        .btn-normal:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 255, 136, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff4444, #ff6b6b);
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 68, 68, 0.4);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ffaa00, #ffcc00);
+            color: #000;
+            animation: pulse-yellow 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse-yellow {
+            0%, 100% { box-shadow: 0 0 10px rgba(255, 170, 0, 0.5); }
+            50% { box-shadow: 0 0 25px rgba(255, 170, 0, 0.8); }
+        }
+
+        .btn-toggle {
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Toggle Status Indicators */
+        .toggle-status {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-dot.active {
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+        }
+
+        .status-dot.inactive {
+            background: #555;
+        }
+
+        .status-dot.danger {
+            background: #ff4444;
+            box-shadow: 0 0 10px #ff4444;
+            animation: blink 0.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* 3D Plot Panel */
+        .plot-panel {
+            background: rgba(20, 20, 40, 0.9);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            flex: 1;
+        }
+
+        #pca-plot {
+            width: 100%;
+            height: 280px;
+            border-radius: 8px;
+        }
+
+        /* Center Panel */
+        .center-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Charts */
+        .chart-container {
+            background: rgba(20, 20, 40, 0.9);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            flex: 1;
+        }
+
+        .chart-title {
+            font-size: 0.9rem;
+            color: #00d4ff;
+            margin-bottom: 10px;
+        }
+
+        #chart-engine, #chart-vibration {
+            width: 100%;
+            height: 200px;
+        }
+
+        /* Truck Diagram */
+        .truck-panel {
+            background: rgba(20, 20, 40, 0.9);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .truck-diagram {
+            position: relative;
+            width: 100%;
+            height: 220px;
+            margin: 10px 0;
+        }
+
+        .truck-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .component-label {
+            position: absolute;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .component-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .component-normal {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+        }
+
+        .component-normal .component-dot {
+            background: #00ff88;
+            box-shadow: 0 0 8px #00ff88;
+        }
+
+        .component-fault {
+            background: rgba(255, 68, 68, 0.3);
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            animation: component-pulse 0.5s infinite;
+        }
+
+        .component-fault .component-dot {
+            background: #ff4444;
+            box-shadow: 0 0 15px #ff4444;
+        }
+
+        @keyframes component-pulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(255, 68, 68, 0.5); }
+            50% { box-shadow: 0 0 25px rgba(255, 68, 68, 0.8); }
+        }
+
+        #engine-label { top: 80px; left: 30px; }
+        #hydraulic-label { top: 120px; left: 30px; }
+        #chassis-label { bottom: 50px; left: 150px; }
+        #wheels-label { bottom: 20px; right: 80px; }
+
+        /* Right Panel - Sensor Readings */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .sensor-panel {
+            background: rgba(20, 20, 40, 0.9);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            flex: 1;
+        }
+
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .sensor-card {
+            background: rgba(10, 10, 30, 0.8);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid rgba(0, 255, 136, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .sensor-card.anomaly {
+            border-color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            box-shadow: 0 0 15px rgba(255, 68, 68, 0.3);
+        }
+
+        .sensor-name {
+            font-size: 0.65rem;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .sensor-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+        }
+
+        .sensor-card.anomaly .sensor-value {
+            color: #ff4444;
+        }
+
+        /* Simulation Controls */
+        .sim-controls {
+            background: rgba(20, 20, 40, 0.9);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .sim-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .sim-buttons .btn {
+            flex: 1;
+        }
+
+        /* Footer */
+        .footer {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 10px;
+            color: #555;
+            font-size: 0.8rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1400px) {
+            .dashboard {
+                grid-template-columns: 280px 1fr 280px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Header -->
+        <div class="header">
+            <div class="title">
+                <span class="title-icon">🚛</span>
+                <h1>Dump Truck Anomaly Detection</h1>
+            </div>
+            
+            <div class="status-section">
+                <div class="metrics">
+                    <div class="metric-box">
+                        <div class="metric-label">Reconstruction Loss</div>
+                        <div class="metric-value" id="recon-error">0.000</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Threshold</div>
+                        <div class="metric-value" id="threshold-value">0.000</div>
+                    </div>
+                </div>
+                
+                <div class="system-status status-normal" id="system-status">
+                    <div class="status-label">System Status</div>
+                    <div class="status-value" id="status-text">SYSTEM NORMAL</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <div class="control-panel">
+                <div class="panel-title">
+                    <span>⚙️</span> Simulation Controls
+                </div>
+                <div class="control-buttons">
+                    <button class="btn btn-normal" id="btn-simulate" onclick="toggleSimulation()">
+                        📊 Simulate Normal
+                    </button>
+                    <button class="btn btn-danger" id="btn-inject" onclick="toggleInjection()">
+                        🔥 INJECT FAILURE 🔥
+                    </button>
+                </div>
+                <div class="toggle-status">
+                    <div class="status-item">
+                        <span class="status-dot" id="dot-injection"></span>
+                        <span id="label-injection">Inject Failure: OFF</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-dot" id="dot-auto"></span>
+                        <span id="label-auto">Auto Mode: OFF</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="plot-panel">
+                <div class="panel-title">
+                    <span>🔮</span> 3D Feature Space (PCA)
+                </div>
+                <div id="pca-plot"></div>
+            </div>
+        </div>
+
+        <!-- Center Panel -->
+        <div class="center-panel">
+            <div class="chart-container">
+                <div class="chart-title">📈 Engine Temp & Hydraulic Pressure</div>
+                <div id="chart-engine"></div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">📊 Vibration & Speed</div>
+                <div id="chart-vibration"></div>
+            </div>
+
+            <div class="truck-panel">
+                <div class="panel-title">
+                    <span>🔧</span> Real-Time Diagnostics
+                </div>
+                <div class="truck-diagram">
+                    <svg class="truck-svg" viewBox="0 0 400 200">
+                        <!-- Truck Body -->
+                        <rect x="80" y="60" width="180" height="80" rx="5" fill="#1a3a5c" stroke="#00ff88" stroke-width="2"/>
+                        <!-- Truck Bed -->
+                        <polygon points="260,60 260,140 350,140 320,60" fill="#1a3a5c" stroke="#00ff88" stroke-width="2"/>
+                        <!-- Cabin -->
+                        <rect x="40" y="80" width="50" height="60" rx="5" fill="#1a3a5c" stroke="#00ff88" stroke-width="2"/>
+                        <!-- Cabin Window -->
+                        <rect x="45" y="85" width="40" height="30" rx="3" fill="#0a1a2e" stroke="#00d4ff" stroke-width="1"/>
+                        <!-- Wheels -->
+                        <circle cx="80" cy="155" r="20" fill="#0a1a2e" stroke="#00ff88" stroke-width="3" id="wheel-fl"/>
+                        <circle cx="180" cy="155" r="20" fill="#0a1a2e" stroke="#00ff88" stroke-width="3" id="wheel-rl"/>
+                        <circle cx="280" cy="155" r="20" fill="#0a1a2e" stroke="#00ff88" stroke-width="3" id="wheel-rr"/>
+                        <!-- Wheel Centers -->
+                        <circle cx="80" cy="155" r="8" fill="#00ff88"/>
+                        <circle cx="180" cy="155" r="8" fill="#00ff88"/>
+                        <circle cx="280" cy="155" r="8" fill="#00ff88"/>
+                        <!-- Engine Area Indicator -->
+                        <rect x="45" y="100" width="30" height="35" rx="3" fill="none" stroke="#00ff88" stroke-width="2" id="engine-area"/>
+                        <!-- Hydraulic System -->
+                        <line x1="260" y1="80" x2="320" y2="60" stroke="#00ff88" stroke-width="3" id="hydraulic-line"/>
+                    </svg>
+                    <div class="component-label component-normal" id="engine-label">
+                        <span class="component-dot"></span>ENGINE
+                    </div>
+                    <div class="component-label component-normal" id="hydraulic-label">
+                        <span class="component-dot"></span>HYDRAULIC
+                    </div>
+                    <div class="component-label component-normal" id="chassis-label">
+                        <span class="component-dot"></span>CHASSIS
+                    </div>
+                    <div class="component-label component-normal" id="wheels-label">
+                        <span class="component-dot"></span>WHEELS
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <div class="sensor-panel">
+                <div class="panel-title">
+                    <span>📡</span> Sensor Readings
+                </div>
+                <div class="sensor-grid" id="sensor-grid">
+                    <!-- Sensors will be dynamically populated -->
+                </div>
+            </div>
+
+            <div class="sim-controls">
+                <div class="panel-title">
+                    <span>🎮</span> Quick Controls
+                </div>
+                <div class="sim-buttons">
+                    <button class="btn btn-normal" onclick="startStream()">▶ Start Stream</button>
+                    <button class="btn btn-danger" onclick="stopStream()">⏹ Stop</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let simulationInterval = null;
+        let isStreaming = false;
+        let injectionActive = false;
+        
+        // PCA scatter data
+        let pcaNormalX = [], pcaNormalY = [], pcaNormalZ = [];
+        let pcaAnomalyX = [], pcaAnomalyY = [], pcaAnomalyZ = [];
+        const MAX_PCA_POINTS = 200;
+
+        // Initialize plots
+        function initPlots() {
+            // PCA 3D Plot
+            const pcaLayout = {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(10,10,30,0.5)',
+                margin: { l: 0, r: 0, t: 0, b: 0 },
+                scene: {
+                    xaxis: { 
+                        title: '', 
+                        showgrid: true, 
+                        gridcolor: '#1a3a5c',
+                        zerolinecolor: '#1a3a5c',
+                        showticklabels: false
+                    },
+                    yaxis: { 
+                        title: '', 
+                        showgrid: true, 
+                        gridcolor: '#1a3a5c',
+                        zerolinecolor: '#1a3a5c',
+                        showticklabels: false
+                    },
+                    zaxis: { 
+                        title: '', 
+                        showgrid: true, 
+                        gridcolor: '#1a3a5c',
+                        zerolinecolor: '#1a3a5c',
+                        showticklabels: false
+                    },
+                    bgcolor: 'rgba(10,10,30,0.5)',
+                    camera: {
+                        eye: { x: 1.5, y: 1.5, z: 1.2 }
+                    }
+                },
+                showlegend: false
+            };
+
+            Plotly.newPlot('pca-plot', [
+                {
+                    x: [], y: [], z: [],
+                    mode: 'markers',
+                    type: 'scatter3d',
+                    marker: { size: 4, color: '#00ff88', opacity: 0.7 },
+                    name: 'Normal'
+                },
+                {
+                    x: [], y: [], z: [],
+                    mode: 'markers',
+                    type: 'scatter3d',
+                    marker: { size: 6, color: '#ff4444', opacity: 0.9 },
+                    name: 'Anomaly'
+                }
+            ], pcaLayout, { responsive: true, displayModeBar: false });
+
+            // Time series charts
+            const chartLayout = {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(10,10,30,0.3)',
+                margin: { l: 40, r: 10, t: 10, b: 30 },
+                xaxis: { 
+                    showgrid: true, 
+                    gridcolor: '#1a3a5c',
+                    color: '#888'
+                },
+                yaxis: { 
+                    showgrid: true, 
+                    gridcolor: '#1a3a5c',
+                    color: '#888'
+                },
+                showlegend: true,
+                legend: { 
+                    x: 0, 
+                    y: 1, 
+                    font: { color: '#888', size: 10 },
+                    bgcolor: 'rgba(0,0,0,0)'
+                }
+            };
+
+            Plotly.newPlot('chart-engine', [
+                { x: [], y: [], mode: 'lines', name: 'Engine Temp', line: { color: '#ff6b6b', width: 2 } },
+                { x: [], y: [], mode: 'lines', name: 'Hydraulic', line: { color: '#ffd93d', width: 2 } }
+            ], chartLayout, { responsive: true, displayModeBar: false });
+
+            Plotly.newPlot('chart-vibration', [
+                { x: [], y: [], mode: 'lines', name: 'Vibration', line: { color: '#ff6b6b', width: 2 } },
+                { x: [], y: [], mode: 'lines', name: 'Speed', line: { color: '#6bcb77', width: 2 } }
+            ], chartLayout, { responsive: true, displayModeBar: false });
+        }
+
+        // Update PCA plot
+        function updatePCAPlot(coords, isAnomaly) {
+            if (isAnomaly) {
+                pcaAnomalyX.push(coords[0]);
+                pcaAnomalyY.push(coords[1]);
+                pcaAnomalyZ.push(coords[2]);
+                
+                if (pcaAnomalyX.length > MAX_PCA_POINTS / 4) {
+                    pcaAnomalyX.shift();
+                    pcaAnomalyY.shift();
+                    pcaAnomalyZ.shift();
+                }
+            } else {
+                pcaNormalX.push(coords[0]);
+                pcaNormalY.push(coords[1]);
+                pcaNormalZ.push(coords[2]);
+                
+                if (pcaNormalX.length > MAX_PCA_POINTS) {
+                    pcaNormalX.shift();
+                    pcaNormalY.shift();
+                    pcaNormalZ.shift();
+                }
+            }
+
+            Plotly.update('pca-plot', {
+                x: [pcaNormalX, pcaAnomalyX],
+                y: [pcaNormalY, pcaAnomalyY],
+                z: [pcaNormalZ, pcaAnomalyZ]
+            });
+        }
+
+        // Update time series charts
+        function updateCharts(timeSeries) {
+            const timestamps = timeSeries.timestamps;
+            
+            Plotly.update('chart-engine', {
+                x: [timestamps, timestamps],
+                y: [timeSeries.engine_temp, timeSeries.hydraulic_pressure]
+            });
+
+            Plotly.update('chart-vibration', {
+                x: [timestamps, timestamps],
+                y: [timeSeries.vibration, timeSeries.speed]
+            });
+        }
+
+        // Update sensor readings
+        function updateSensorReadings(sensors, isAnomaly) {
+            const grid = document.getElementById('sensor-grid');
+            grid.innerHTML = '';
+            
+            for (const [name, value] of Object.entries(sensors)) {
+                const card = document.createElement('div');
+                card.className = 'sensor-card' + (isAnomaly ? ' anomaly' : '');
+                card.innerHTML = `
+                    <div class="sensor-name">${name}</div>
+                    <div class="sensor-value">${value.toFixed(2)}</div>
+                `;
+                grid.appendChild(card);
+            }
+        }
+
+        // Update system status
+        function updateSystemStatus(isAnomaly, reconError, threshold) {
+            const statusBox = document.getElementById('system-status');
+            const statusText = document.getElementById('status-text');
+            const reconDisplay = document.getElementById('recon-error');
+            const thresholdDisplay = document.getElementById('threshold-value');
+
+            reconDisplay.textContent = reconError.toFixed(4);
+            thresholdDisplay.textContent = threshold.toFixed(4);
+
+            if (isAnomaly) {
+                statusBox.className = 'system-status status-anomaly';
+                statusText.textContent = '⚠️ ANOMALY DETECTED';
+            } else {
+                statusBox.className = 'system-status status-normal';
+                statusText.textContent = 'SYSTEM NORMAL';
+            }
+        }
+
+        // Update truck components
+        function updateTruckComponents(affected) {
+            const components = ['engine', 'hydraulic', 'chassis', 'wheels'];
+            
+            components.forEach(comp => {
+                const label = document.getElementById(comp + '-label');
+                if (affected[comp]) {
+                    label.className = 'component-label component-fault';
+                } else {
+                    label.className = 'component-label component-normal';
+                }
+            });
+
+            // Update SVG elements
+            const wheelColor = affected.wheels ? '#ff4444' : '#00ff88';
+            document.getElementById('wheel-fl').setAttribute('stroke', wheelColor);
+            document.getElementById('wheel-rl').setAttribute('stroke', wheelColor);
+            document.getElementById('wheel-rr').setAttribute('stroke', wheelColor);
+            
+            const engineColor = affected.engine ? '#ff4444' : '#00ff88';
+            document.getElementById('engine-area').setAttribute('stroke', engineColor);
+            
+            const hydraulicColor = affected.hydraulic ? '#ff4444' : '#00ff88';
+            document.getElementById('hydraulic-line').setAttribute('stroke', hydraulicColor);
+        }
+
+        // Toggle injection
+        async function toggleInjection() {
+            try {
+                const response = await fetch('/toggle_injection', { method: 'POST' });
+                const data = await response.json();
+                injectionActive = data.inject_anomaly;
+                updateInjectionUI();
+            } catch (error) {
+                console.error('Error toggling injection:', error);
+            }
+        }
+
+        // Update injection UI
+        function updateInjectionUI() {
+            const btn = document.getElementById('btn-inject');
+            const dot = document.getElementById('dot-injection');
+            const label = document.getElementById('label-injection');
+
+            if (injectionActive) {
+                btn.className = 'btn btn-warning';
+                btn.innerHTML = '🛑 STOP FAILURE 🛑';
+                dot.className = 'status-dot danger';
+                label.textContent = 'Inject Failure: ON';
+            } else {
+                btn.className = 'btn btn-danger';
+                btn.innerHTML = '🔥 INJECT FAILURE 🔥';
+                dot.className = 'status-dot inactive';
+                label.textContent = 'Inject Failure: OFF';
+            }
+        }
+
+        // Toggle simulation
+        function toggleSimulation() {
+            if (isStreaming) {
+                stopStream();
+            } else {
+                startStream();
+            }
+        }
+
+        // Fetch data
+        async function fetchData() {
+            try {
+                const response = await fetch('/simulate_data');
+                const data = await response.json();
+                
+                // Update injection state from server
+                injectionActive = data.inject_active;
+                updateInjectionUI();
+                
+                // Update all visualizations
+                updateSystemStatus(data.is_anomaly, data.reconstruction_error, data.threshold);
+                updateSensorReadings(data.sensor_readings, data.is_anomaly);
+                updatePCAPlot(data.pca_coords, data.is_anomaly);
+                updateCharts(data.time_series);
+                updateTruckComponents(data.affected_components);
+                
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        // Start streaming
+        function startStream() {
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+            }
+            
+            isStreaming = true;
+            simulationInterval = setInterval(fetchData, 400);
+            
+            const btn = document.getElementById('btn-simulate');
+            btn.innerHTML = '⏸ Pause Stream';
+            
+            const dotAuto = document.getElementById('dot-auto');
+            const labelAuto = document.getElementById('label-auto');
+            dotAuto.className = 'status-dot active';
+            labelAuto.textContent = 'Auto Mode: ON';
+        }
+
+        // Stop streaming
+        function stopStream() {
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+                simulationInterval = null;
+            }
+            
+            isStreaming = false;
+            
+            const btn = document.getElementById('btn-simulate');
+            btn.innerHTML = '📊 Simulate Normal';
+            
+            const dotAuto = document.getElementById('dot-auto');
+            const labelAuto = document.getElementById('label-auto');
+            dotAuto.className = 'status-dot inactive';
+            labelAuto.textContent = 'Auto Mode: OFF';
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            initPlots();
+            
+            // Get initial injection state
+            fetch('/get_injection_state')
+                .then(r => r.json())
+                .then(data => {
+                    injectionActive = data.inject_anomaly;
+                    updateInjectionUI();
+                });
+        });
+    </script>
+</body>
+</html>

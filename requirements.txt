@@ -1,0 +1,18 @@
+# Dump Truck Engine Anomaly Detection - Requirements
+# Production-ready for Render.com deployment
+
+# Web Framework
+flask>=3.0.0
+gunicorn>=21.2.0
+
+# Machine Learning
+tensorflow>=2.15.0
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
+
+# Serialization
+joblib>=1.3.0
+
+# Production Server
+Werkzeug>=3.0.0
