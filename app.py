@@ -16,9 +16,36 @@ import time
 
 app = Flask(__name__)
 
+# ============================================================
+# COMPONENT-BASED FAILURE INJECTION SYSTEM
+# Maps physical truck components to their associated sensors
+# ============================================================
+
+# Component → Sensor Index Mapping
+# Based on sensor_cols order: ['Speed_kmph', 'Load_tons', 'Fuel_Rate_Lph', 'Brake_Temp_C',
+#                              'Vibration_mm_s', 'Oil_Pressure_bar', 'Hydraulic_Pressure_bar', 'Engine_Temp_C']
+COMPONENT_SENSOR_MAP = {
+    'engine': [7, 5, 2],      # Engine_Temp_C (idx 7), Oil_Pressure_bar (idx 5), Fuel_Rate_Lph (idx 2)
+    'hydraulic': [6, 1],      # Hydraulic_Pressure_bar (idx 6), Load_tons (idx 1)
+    'wheels': [4, 3, 0],      # Vibration_mm_s (idx 4), Brake_Temp_C (idx 3), Speed_kmph (idx 0)
+    'chassis': [4, 1]         # Vibration_mm_s (idx 4), Load_tons (idx 1) - structural stress
+}
+
+# Realistic failure combinations (weighted by probability)
+FAILURE_SCENARIOS = [
+    (['engine'], 0.30),                    # Engine-only failure (30%)
+    (['hydraulic'], 0.25),                 # Hydraulic-only failure (25%)
+    (['wheels'], 0.20),                    # Wheel/brake failure (20%)
+    (['engine', 'hydraulic'], 0.10),       # Engine + Hydraulic (10%)
+    (['wheels', 'chassis'], 0.10),         # Wheels + Chassis stress (10%)
+    (['hydraulic', 'wheels'], 0.05)        # Hydraulic + Wheels (5%)
+]
+
 # Global state for anomaly injection
 injection_state = {
     'inject_anomaly': False,
+    'active_failures': [],      # Currently failing components (stable during injection)
+    'failure_locked': False,    # Lock failure selection while injection is ON
     'lock': threading.Lock()
 }
 
@@ -68,44 +95,94 @@ SENSOR_DISPLAY_NAMES = {
     'Engine_Temp_C': 'ENGINE TEMP °C'
 }
 
+import random
+
 @app.route('/')
 def index():
     """Render main dashboard"""
     return render_template('index.html')
 
+def select_failure_scenario():
+    """
+    Select a realistic failure scenario based on weighted probabilities.
+    Returns a list of component names that will fail.
+    """
+    rand = random.random()
+    cumulative = 0.0
+    for components, probability in FAILURE_SCENARIOS:
+        cumulative += probability
+        if rand <= cumulative:
+            return components.copy()
+    # Fallback to single engine failure
+    return ['engine']
+
 @app.route('/toggle_injection', methods=['POST'])
 def toggle_injection():
-    """Toggle anomaly injection state"""
+    """Toggle anomaly injection state with component-based failure selection"""
     with injection_state['lock']:
         injection_state['inject_anomaly'] = not injection_state['inject_anomaly']
         current_state = injection_state['inject_anomaly']
-    return jsonify({'inject_anomaly': current_state})
+        
+        if current_state:
+            # Injection turned ON: Select random failure scenario
+            injection_state['active_failures'] = select_failure_scenario()
+            injection_state['failure_locked'] = True
+            print(f"[INJECTION ON] Failing components: {injection_state['active_failures']}")
+        else:
+            # Injection turned OFF: Clear failures
+            injection_state['active_failures'] = []
+            injection_state['failure_locked'] = False
+            print("[INJECTION OFF] All components normal")
+    
+    return jsonify({
+        'inject_anomaly': current_state,
+        'failed_components': injection_state['active_failures']
+    })
 
 @app.route('/get_injection_state')
 def get_injection_state():
-    """Get current injection state"""
+    """Get current injection state including active failures"""
     with injection_state['lock']:
-        return jsonify({'inject_anomaly': injection_state['inject_anomaly']})
+        return jsonify({
+            'inject_anomaly': injection_state['inject_anomaly'],
+            'failed_components': injection_state['active_failures']
+        })
 
 @app.route('/simulate_data')
 def simulate_data():
-    """Generate and analyze simulated sensor data"""
+    """
+    Generate and analyze simulated sensor data with COMPONENT-BASED failure injection.
+    Only sensors belonging to failed components will spike during injection.
+    """
     global data_buffer
     
-    # Get injection state
+    # Get injection state and active failures
     with injection_state['lock']:
         inject = injection_state['inject_anomaly']
+        active_failures = injection_state['active_failures'].copy()
     
-    # Generate sensor data
+    # Generate base sensor data (normal distribution for all sensors)
     means = np.array(data_stats['mean'])
     stds = np.array(data_stats['std'])
+    raw_data = means + np.random.randn(len(means)) * stds * 0.3
     
-    if inject:
-        # CRITICAL: Spike ALL sensor values by +10 standard deviations
-        raw_data = means + 10 * stds + np.random.randn(len(means)) * stds * 0.5
-    else:
-        # Normal distribution
-        raw_data = means + np.random.randn(len(means)) * stds * 0.3
+    # ============================================================
+    # COMPONENT-BASED FAILURE INJECTION
+    # Only spike sensors belonging to the selected failed components
+    # ============================================================
+    if inject and active_failures:
+        # Collect all sensor indices that should be spiked
+        sensors_to_spike = set()
+        for component in active_failures:
+            if component in COMPONENT_SENSOR_MAP:
+                sensors_to_spike.update(COMPONENT_SENSOR_MAP[component])
+        
+        # Spike ONLY the affected sensors by +8 to +12 standard deviations
+        for sensor_idx in sensors_to_spike:
+            spike_magnitude = 8 + np.random.rand() * 4  # Random between 8-12 std
+            raw_data[sensor_idx] = means[sensor_idx] + spike_magnitude * stds[sensor_idx]
+            # Add slight noise for realism
+            raw_data[sensor_idx] += np.random.randn() * stds[sensor_idx] * 0.3
     
     # Ensure positive values
     raw_data = np.maximum(raw_data, 0.1)
@@ -161,7 +238,10 @@ def simulate_data():
         data_buffer['vibration'] = data_buffer['vibration'][-max_pts:]
         data_buffer['speed'] = data_buffer['speed'][-max_pts:]
     
-    # Determine which components are affected
+    # ============================================================
+    # COMPONENT STATUS DETERMINATION
+    # Check each component based on its sensor values vs thresholds
+    # ============================================================
     affected_components = {
         'engine': False,
         'hydraulic': False,
@@ -170,23 +250,40 @@ def simulate_data():
     }
     
     if is_anomaly:
-        # Check which sensors are anomalous
+        # Threshold multiplier for detecting component-level anomalies
+        ANOMALY_THRESHOLD_MULTIPLIER = 3.0
+        
+        # ENGINE: Check Engine_Temp_C, Oil_Pressure_bar, Fuel_Rate_Lph
         engine_temp = raw_data[7]
+        oil_pressure = raw_data[5]
+        fuel_rate = raw_data[2]
+        if (engine_temp > means[7] + ANOMALY_THRESHOLD_MULTIPLIER * stds[7] or
+            oil_pressure > means[5] + ANOMALY_THRESHOLD_MULTIPLIER * stds[5] or
+            fuel_rate > means[2] + ANOMALY_THRESHOLD_MULTIPLIER * stds[2]):
+            affected_components['engine'] = True
+        
+        # HYDRAULIC: Check Hydraulic_Pressure_bar, Load_tons
         hydraulic_pressure = raw_data[6]
+        load = raw_data[1]
+        if (hydraulic_pressure > means[6] + ANOMALY_THRESHOLD_MULTIPLIER * stds[6] or
+            load > means[1] + ANOMALY_THRESHOLD_MULTIPLIER * stds[1]):
+            affected_components['hydraulic'] = True
+        
+        # WHEELS: Check Vibration_mm_s, Brake_Temp_C, Speed_kmph
         vibration = raw_data[4]
         brake_temp = raw_data[3]
+        speed = raw_data[0]
+        if (vibration > means[4] + ANOMALY_THRESHOLD_MULTIPLIER * stds[4] or
+            brake_temp > means[3] + ANOMALY_THRESHOLD_MULTIPLIER * stds[3] or
+            speed > means[0] + ANOMALY_THRESHOLD_MULTIPLIER * stds[0]):
+            affected_components['wheels'] = True
         
-        if engine_temp > means[7] + 3 * stds[7]:
-            affected_components['engine'] = True
-        if hydraulic_pressure > means[6] + 3 * stds[6]:
-            affected_components['hydraulic'] = True
-        if vibration > means[4] + 3 * stds[4]:
-            affected_components['wheels'] = True
+        # CHASSIS: Check Vibration_mm_s, Load_tons (structural stress indicators)
+        if (vibration > means[4] + ANOMALY_THRESHOLD_MULTIPLIER * stds[4] or
+            load > means[1] + ANOMALY_THRESHOLD_MULTIPLIER * stds[1]):
             affected_components['chassis'] = True
-        if brake_temp > means[3] + 3 * stds[3]:
-            affected_components['wheels'] = True
     
-    # Build response
+    # Build response with enhanced component information
     response = {
         'sensor_readings': sensor_readings,
         'reconstruction_error': round(reconstruction_error, 4),
@@ -194,6 +291,7 @@ def simulate_data():
         'is_anomaly': bool(is_anomaly),
         'pca_coords': pca_coords,
         'affected_components': affected_components,
+        'failed_components': active_failures,  # NEW: Explicitly list which components are failing
         'inject_active': inject,
         'time_series': {
             'timestamps': data_buffer['timestamps'][-100:],

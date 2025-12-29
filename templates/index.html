@@ -872,6 +872,7 @@
         let simulationInterval = null;
         let isStreaming = false;
         let injectionActive = false;
+        let activeFailedComponents = [];  // Track which components are currently failing
         
         // PCA scatter data
         let pcaNormalX = [], pcaNormalY = [], pcaNormalZ = [];
@@ -1100,13 +1101,14 @@
                 const response = await fetch('/toggle_injection', { method: 'POST' });
                 const data = await response.json();
                 injectionActive = data.inject_anomaly;
+                activeFailedComponents = data.failed_components || [];
                 updateInjectionUI();
             } catch (error) {
                 console.error('Error toggling injection:', error);
             }
         }
 
-        // Update injection UI
+        // Update injection UI with component-based failure display
         function updateInjectionUI() {
             const btn = document.getElementById('btn-inject');
             const dot = document.getElementById('dot-injection');
@@ -1114,14 +1116,19 @@
 
             if (injectionActive) {
                 btn.className = 'btn btn-warning';
-                btn.innerHTML = '🛑 STOP FAILURE 🛑';
+                // Show which components are failing
+                const failureText = activeFailedComponents.length > 0 
+                    ? activeFailedComponents.map(c => c.toUpperCase()).join(' + ')
+                    : 'ACTIVE';
+                btn.innerHTML = `🛑 STOP: ${failureText} 🛑`;
                 dot.className = 'status-dot danger';
-                label.textContent = 'Inject Failure: ON';
+                label.textContent = `Failing: ${failureText}`;
             } else {
                 btn.className = 'btn btn-danger';
                 btn.innerHTML = '🔥 INJECT FAILURE 🔥';
                 dot.className = 'status-dot inactive';
                 label.textContent = 'Inject Failure: OFF';
+                activeFailedComponents = [];
             }
         }
 
@@ -1142,6 +1149,10 @@
                 
                 // Update injection state from server
                 injectionActive = data.inject_active;
+                // Update active failed components list from server
+                if (data.failed_components) {
+                    activeFailedComponents = data.failed_components;
+                }
                 updateInjectionUI();
                 
                 // Update all visualizations
@@ -1196,11 +1207,12 @@
         document.addEventListener('DOMContentLoaded', () => {
             initPlots();
             
-            // Get initial injection state
+            // Get initial injection state including any active failures
             fetch('/get_injection_state')
                 .then(r => r.json())
                 .then(data => {
                     injectionActive = data.inject_anomaly;
+                    activeFailedComponents = data.failed_components || [];
                     updateInjectionUI();
                 });
         });
