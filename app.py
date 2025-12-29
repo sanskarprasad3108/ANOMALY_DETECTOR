@@ -333,6 +333,8 @@ def simulate_data():
             affected_components[SENSOR_SECONDARY_COMPONENT[param]] = True
     
     # Build response with enhanced component information
+    # EXPLICIT COMPONENT ANOMALY FLAGS - Direct boolean for each component
+    # These are the AUTHORITATIVE flags for UI truck diagram updates
     response = {
         'sensor_readings': sensor_readings,
         'anomalous_parameters': anomalous_parameters,  # List of sensor names that are anomalous
@@ -341,6 +343,14 @@ def simulate_data():
         'is_anomaly': bool(is_anomaly),
         'pca_coords': pca_coords,
         'affected_components': affected_components,
+        # ============================================================
+        # EXPLICIT COMPONENT ANOMALY FLAGS (NON-NEGOTIABLE)
+        # Frontend MUST use these directly - no inference
+        # ============================================================
+        'engine_anomaly': bool(affected_components.get('engine', False)),
+        'hydraulic_anomaly': bool(affected_components.get('hydraulic', False)),
+        'wheel_anomaly': bool(affected_components.get('wheels', False)),
+        'chassis_anomaly': bool(affected_components.get('chassis', False)),
         'failed_components': active_failures,  # Currently failing components
         'failure_probabilities': COMPONENT_FAILURE_WEIGHTS,  # Static probability weights
         'inject_active': inject,

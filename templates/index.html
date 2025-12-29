@@ -1245,37 +1245,55 @@
             }
         }
 
-        // Update truck components
-        // Handles both floating labels and SVG diagnostic overlay zones
-        function updateTruckComponents(affected) {
-            const components = ['engine', 'hydraulic', 'chassis', 'wheels'];
+        // ============================================================
+        // UPDATE TRUCK COMPONENTS - DIRECT STATE SYNC
+        // Uses explicit anomaly flags from backend - NO INFERENCE
+        // Each zone MUST glow RED when its anomaly flag is TRUE
+        // ============================================================
+        function updateTruckComponents(componentAnomalies) {
+            // Map: component name -> { labelId, zoneId, anomalyFlag }
+            const componentMap = {
+                'engine': { labelId: 'engine-label', zoneId: 'engine-zone', anomaly: componentAnomalies.engine_anomaly },
+                'hydraulic': { labelId: 'hydraulic-label', zoneId: 'hydraulic-zone', anomaly: componentAnomalies.hydraulic_anomaly },
+                'chassis': { labelId: 'chassis-label', zoneId: 'chassis-zone', anomaly: componentAnomalies.chassis_anomaly },
+                'wheels': { labelId: 'wheels-label', zoneId: 'wheels-zone', anomaly: componentAnomalies.wheel_anomaly }
+            };
             
-            components.forEach(comp => {
-                const label = document.getElementById(comp + '-label');
-                const zone = document.getElementById(comp + '-zone');
+            // Process each component
+            Object.entries(componentMap).forEach(([comp, config]) => {
+                const label = document.getElementById(config.labelId);
+                const zone = document.getElementById(config.zoneId);
+                const hasAnomaly = config.anomaly === true;
                 
-                // Update floating label badges
-                if (affected[comp]) {
-                    label.className = 'component-label component-fault';
-                } else {
-                    label.className = 'component-label component-normal';
+                // STEP 1: Update floating label badges
+                if (label) {
+                    if (hasAnomaly) {
+                        label.className = 'component-label component-fault';
+                    } else {
+                        label.className = 'component-label component-normal';
+                    }
                 }
                 
-                // Update SVG diagnostic overlay zones
+                // STEP 2: Update SVG diagnostic overlay zones (THE GLOW)
                 if (zone) {
-                    if (affected[comp]) {
-                        zone.classList.remove('zone-normal', 'zone-warning');
+                    // FIRST: Reset to clean state
+                    zone.classList.remove('zone-normal', 'zone-fault', 'zone-warning');
+                    
+                    // THEN: Apply correct state
+                    if (hasAnomaly) {
                         zone.classList.add('zone-fault');
+                        zone.style.opacity = '0.7';  // Make it more visible when fault
                     } else {
-                        zone.classList.remove('zone-fault', 'zone-warning');
                         zone.classList.add('zone-normal');
+                        zone.style.opacity = '0.3';  // Subtle when normal
                     }
                 }
             });
 
             // Update wheel stroke indicators (for additional visual feedback)
-            const wheelColor = affected.wheels ? '#ff4444' : 'transparent';
-            const wheelStroke = affected.wheels ? '4' : '0';
+            const hasWheelAnomaly = componentAnomalies.wheel_anomaly === true;
+            const wheelColor = hasWheelAnomaly ? '#ff4444' : 'transparent';
+            const wheelStroke = hasWheelAnomaly ? '4' : '0';
             document.getElementById('wheel-fl').setAttribute('stroke', wheelColor);
             document.getElementById('wheel-fl').setAttribute('stroke-width', wheelStroke);
             document.getElementById('wheel-rl').setAttribute('stroke', wheelColor);
@@ -1284,11 +1302,21 @@
             document.getElementById('wheel-rr').setAttribute('stroke-width', wheelStroke);
             
             // Legacy element updates (kept for compatibility)
-            const engineColor = affected.engine ? '#ff4444' : 'transparent';
+            const hasEngineAnomaly = componentAnomalies.engine_anomaly === true;
+            const engineColor = hasEngineAnomaly ? '#ff4444' : 'transparent';
             document.getElementById('engine-area').setAttribute('stroke', engineColor);
             
-            const hydraulicColor = affected.hydraulic ? '#ff4444' : 'transparent';
+            const hasHydraulicAnomaly = componentAnomalies.hydraulic_anomaly === true;
+            const hydraulicColor = hasHydraulicAnomaly ? '#ff4444' : 'transparent';
             document.getElementById('hydraulic-line').setAttribute('stroke', hydraulicColor);
+            
+            // Debug logging to console (remove in production)
+            console.log('Truck Component Update:', {
+                engine: componentAnomalies.engine_anomaly,
+                hydraulic: componentAnomalies.hydraulic_anomaly,
+                wheels: componentAnomalies.wheel_anomaly,
+                chassis: componentAnomalies.chassis_anomaly
+            });
         }
 
         // ============================================================
@@ -1401,7 +1429,10 @@
                 updateSensorReadings(data.sensor_readings, data.is_anomaly, data.anomalous_parameters || []);
                 updatePCAPlot(data.pca_coords, data.is_anomaly);
                 updateCharts(data.time_series);
-                updateTruckComponents(data.affected_components);
+                
+                // Pass the FULL data object which contains explicit *_anomaly flags
+                // NOT just affected_components - we need engine_anomaly, hydraulic_anomaly, etc.
+                updateTruckComponents(data);
                 
                 // Update failure probability panel
                 updateFailureProbabilities(data.failure_probabilities, data.failed_components);
