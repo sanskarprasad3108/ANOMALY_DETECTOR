@@ -1207,14 +1207,17 @@
             });
         }
 
-        // Update sensor readings
-        function updateSensorReadings(sensors, isAnomaly) {
+        // Update sensor readings with PER-SENSOR anomaly highlighting
+        // Only sensors in anomalousParams will turn RED, others stay GREEN
+        function updateSensorReadings(sensors, isAnomaly, anomalousParams = []) {
             const grid = document.getElementById('sensor-grid');
             grid.innerHTML = '';
             
             for (const [name, value] of Object.entries(sensors)) {
                 const card = document.createElement('div');
-                card.className = 'sensor-card' + (isAnomaly ? ' anomaly' : '');
+                // Check if THIS SPECIFIC sensor is in the anomalous list
+                const isSensorAnomalous = anomalousParams.includes(name);
+                card.className = 'sensor-card' + (isSensorAnomalous ? ' anomaly' : '');
                 card.innerHTML = `
                     <div class="sensor-name">${name}</div>
                     <div class="sensor-value">${value.toFixed(2)}</div>
@@ -1394,7 +1397,8 @@
                 
                 // Update all visualizations
                 updateSystemStatus(data.is_anomaly, data.reconstruction_error, data.threshold);
-                updateSensorReadings(data.sensor_readings, data.is_anomaly);
+                // Pass anomalous_parameters for per-sensor highlighting
+                updateSensorReadings(data.sensor_readings, data.is_anomaly, data.anomalous_parameters || []);
                 updatePCAPlot(data.pca_coords, data.is_anomaly);
                 updateCharts(data.time_series);
                 updateTruckComponents(data.affected_components);

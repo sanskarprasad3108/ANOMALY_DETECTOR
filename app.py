@@ -205,7 +205,10 @@ def simulate_data():
     # ============================================================
     # COMPONENT-BASED FAILURE INJECTION
     # Only spike sensors belonging to the selected failed components
+    # Track EXACTLY which sensors are spiked for precise UI highlighting
     # ============================================================
+    spiked_sensor_indices = set()  # Track which sensors are actually spiked
+    
     if inject and active_failures:
         # Collect all sensor indices that should be spiked
         sensors_to_spike = set()
@@ -219,16 +222,33 @@ def simulate_data():
             raw_data[sensor_idx] = means[sensor_idx] + spike_magnitude * stds[sensor_idx]
             # Add slight noise for realism
             raw_data[sensor_idx] += np.random.randn() * stds[sensor_idx] * 0.3
+            # Track this sensor as spiked
+            spiked_sensor_indices.add(sensor_idx)
     
     # Ensure positive values
     raw_data = np.maximum(raw_data, 0.1)
     
-    # Create sensor readings dictionary
+    # Create sensor readings dictionary with per-sensor anomaly status
     sensor_cols = data_stats['sensor_cols']
     sensor_readings = {}
+    anomalous_parameters = []  # List of sensor names that are actually anomalous
+    
+    # Threshold multiplier for detecting per-sensor anomalies
+    SENSOR_ANOMALY_THRESHOLD = 3.0
+    
     for i, col in enumerate(sensor_cols):
         display_name = SENSOR_DISPLAY_NAMES.get(col, col)
-        sensor_readings[display_name] = round(float(raw_data[i]), 2)
+        value = float(raw_data[i])
+        sensor_readings[display_name] = round(value, 2)
+        
+        # Check if THIS SPECIFIC sensor is anomalous (value exceeds threshold)
+        # A sensor is anomalous if it was spiked AND exceeds the statistical threshold
+        is_sensor_anomalous = (
+            i in spiked_sensor_indices and 
+            value > means[i] + SENSOR_ANOMALY_THRESHOLD * stds[i]
+        )
+        if is_sensor_anomalous:
+            anomalous_parameters.append(display_name)
     
     # Scale data for model
     if model is not None and scaler is not None:
@@ -276,7 +296,8 @@ def simulate_data():
     
     # ============================================================
     # COMPONENT STATUS DETERMINATION
-    # Check each component based on its sensor values vs thresholds
+    # A component is affected ONLY if one of its sensors is in anomalous_parameters
+    # This ensures precise fault isolation - not all components turn red
     # ============================================================
     affected_components = {
         'engine': False,
@@ -285,43 +306,36 @@ def simulate_data():
         'wheels': False
     }
     
-    if is_anomaly:
-        # Threshold multiplier for detecting component-level anomalies
-        ANOMALY_THRESHOLD_MULTIPLIER = 3.0
-        
-        # ENGINE: Check Engine_Temp_C, Oil_Pressure_bar, Fuel_Rate_Lph
-        engine_temp = raw_data[7]
-        oil_pressure = raw_data[5]
-        fuel_rate = raw_data[2]
-        if (engine_temp > means[7] + ANOMALY_THRESHOLD_MULTIPLIER * stds[7] or
-            oil_pressure > means[5] + ANOMALY_THRESHOLD_MULTIPLIER * stds[5] or
-            fuel_rate > means[2] + ANOMALY_THRESHOLD_MULTIPLIER * stds[2]):
-            affected_components['engine'] = True
-        
-        # HYDRAULIC: Check Hydraulic_Pressure_bar, Load_tons
-        hydraulic_pressure = raw_data[6]
-        load = raw_data[1]
-        if (hydraulic_pressure > means[6] + ANOMALY_THRESHOLD_MULTIPLIER * stds[6] or
-            load > means[1] + ANOMALY_THRESHOLD_MULTIPLIER * stds[1]):
-            affected_components['hydraulic'] = True
-        
-        # WHEELS: Check Vibration_mm_s, Brake_Temp_C, Speed_kmph
-        vibration = raw_data[4]
-        brake_temp = raw_data[3]
-        speed = raw_data[0]
-        if (vibration > means[4] + ANOMALY_THRESHOLD_MULTIPLIER * stds[4] or
-            brake_temp > means[3] + ANOMALY_THRESHOLD_MULTIPLIER * stds[3] or
-            speed > means[0] + ANOMALY_THRESHOLD_MULTIPLIER * stds[0]):
-            affected_components['wheels'] = True
-        
-        # CHASSIS: Check Vibration_mm_s, Load_tons (structural stress indicators)
-        if (vibration > means[4] + ANOMALY_THRESHOLD_MULTIPLIER * stds[4] or
-            load > means[1] + ANOMALY_THRESHOLD_MULTIPLIER * stds[1]):
-            affected_components['chassis'] = True
+    # Map display names back to component ownership
+    # Only mark a component as affected if its sensor is ACTUALLY anomalous
+    SENSOR_TO_COMPONENT = {
+        'ENGINE TEMP °C': 'engine',
+        'OIL PRESSURE BAR': 'engine',
+        'FUEL RATE L/H': 'engine',
+        'HYDRAULIC PRESSURE BAR': 'hydraulic',
+        'LOAD TONS': 'hydraulic',  # Also affects chassis
+        'VIBRATION MM/S': 'wheels',  # Also affects chassis
+        'BRAKE TEMP °C': 'wheels',
+        'SPEED KM/H': 'wheels'
+    }
+    
+    # Secondary component mappings (some sensors affect multiple components)
+    SENSOR_SECONDARY_COMPONENT = {
+        'LOAD TONS': 'chassis',
+        'VIBRATION MM/S': 'chassis'
+    }
+    
+    # Set affected components based on ACTUAL anomalous parameters
+    for param in anomalous_parameters:
+        if param in SENSOR_TO_COMPONENT:
+            affected_components[SENSOR_TO_COMPONENT[param]] = True
+        if param in SENSOR_SECONDARY_COMPONENT:
+            affected_components[SENSOR_SECONDARY_COMPONENT[param]] = True
     
     # Build response with enhanced component information
     response = {
         'sensor_readings': sensor_readings,
+        'anomalous_parameters': anomalous_parameters,  # List of sensor names that are anomalous
         'reconstruction_error': round(reconstruction_error, 4),
         'threshold': round(float(threshold), 4),
         'is_anomaly': bool(is_anomaly),
