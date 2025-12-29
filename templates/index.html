@@ -557,6 +557,131 @@
             flex: 1;
         }
 
+        /* ========================================
+           FAILURE PROBABILITY PANEL
+           Shows weighted failure rates per component
+           ======================================== */
+        .probability-panel {
+            background: rgba(20, 20, 40, 0.9);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(255, 170, 0, 0.3);
+        }
+
+        .probability-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .probability-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px 12px;
+            background: rgba(10, 10, 30, 0.6);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .probability-item.failing {
+            border-color: #ff4444;
+            background: rgba(255, 68, 68, 0.15);
+            box-shadow: 0 0 15px rgba(255, 68, 68, 0.3);
+        }
+
+        .probability-item.failing .prob-component {
+            color: #ff6b6b;
+        }
+
+        .probability-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .prob-component {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #00d4ff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .prob-percentage {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #ffaa00;
+            font-family: 'Courier New', monospace;
+        }
+
+        .probability-bar-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .probability-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease, background 0.3s ease;
+        }
+
+        .probability-bar.engine {
+            background: linear-gradient(90deg, #ff6b6b, #ff4444);
+        }
+
+        .probability-bar.hydraulic {
+            background: linear-gradient(90deg, #ffd93d, #ffaa00);
+        }
+
+        .probability-bar.wheels {
+            background: linear-gradient(90deg, #6bcb77, #4CAF50);
+        }
+
+        .probability-bar.chassis {
+            background: linear-gradient(90deg, #4fc3f7, #00d4ff);
+        }
+
+        .prob-status {
+            font-size: 0.6rem;
+            color: #666;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .prob-status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #00ff88;
+        }
+
+        .prob-status-dot.failing {
+            background: #ff4444;
+            animation: prob-dot-pulse 0.5s ease-in-out infinite;
+        }
+
+        @keyframes prob-dot-pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 4px #ff4444; }
+            50% { opacity: 0.5; box-shadow: 0 0 8px #ff4444; }
+        }
+
+        .probability-legend {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.6rem;
+            color: #666;
+            text-align: center;
+            line-height: 1.4;
+        }
+
         /* Footer */
         .footer {
             grid-column: 1 / -1;
@@ -855,6 +980,74 @@
                 </div>
             </div>
 
+            <!-- Failure Probability Panel -->
+            <div class="probability-panel">
+                <div class="panel-title">
+                    <span>📊</span> Failure Probability
+                </div>
+                <div class="probability-grid" id="probability-grid">
+                    <!-- Engine -->
+                    <div class="probability-item" id="prob-engine">
+                        <div class="probability-header">
+                            <span class="prob-component">🔥 Engine</span>
+                            <span class="prob-percentage" id="prob-engine-pct">40%</span>
+                        </div>
+                        <div class="probability-bar-container">
+                            <div class="probability-bar engine" id="prob-engine-bar" style="width: 40%;"></div>
+                        </div>
+                        <div class="prob-status">
+                            <span class="prob-status-dot" id="prob-engine-dot"></span>
+                            <span id="prob-engine-status">Normal</span>
+                        </div>
+                    </div>
+                    <!-- Hydraulic -->
+                    <div class="probability-item" id="prob-hydraulic">
+                        <div class="probability-header">
+                            <span class="prob-component">💧 Hydraulics</span>
+                            <span class="prob-percentage" id="prob-hydraulic-pct">30%</span>
+                        </div>
+                        <div class="probability-bar-container">
+                            <div class="probability-bar hydraulic" id="prob-hydraulic-bar" style="width: 30%;"></div>
+                        </div>
+                        <div class="prob-status">
+                            <span class="prob-status-dot" id="prob-hydraulic-dot"></span>
+                            <span id="prob-hydraulic-status">Normal</span>
+                        </div>
+                    </div>
+                    <!-- Wheels -->
+                    <div class="probability-item" id="prob-wheels">
+                        <div class="probability-header">
+                            <span class="prob-component">⚙️ Wheels</span>
+                            <span class="prob-percentage" id="prob-wheels-pct">20%</span>
+                        </div>
+                        <div class="probability-bar-container">
+                            <div class="probability-bar wheels" id="prob-wheels-bar" style="width: 20%;"></div>
+                        </div>
+                        <div class="prob-status">
+                            <span class="prob-status-dot" id="prob-wheels-dot"></span>
+                            <span id="prob-wheels-status">Normal</span>
+                        </div>
+                    </div>
+                    <!-- Chassis -->
+                    <div class="probability-item" id="prob-chassis">
+                        <div class="probability-header">
+                            <span class="prob-component">🛡️ Chassis</span>
+                            <span class="prob-percentage" id="prob-chassis-pct">10%</span>
+                        </div>
+                        <div class="probability-bar-container">
+                            <div class="probability-bar chassis" id="prob-chassis-bar" style="width: 10%;"></div>
+                        </div>
+                        <div class="prob-status">
+                            <span class="prob-status-dot" id="prob-chassis-dot"></span>
+                            <span id="prob-chassis-status">Normal</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="probability-legend">
+                    ⚠️ Higher % = More likely to fail when injection is active
+                </div>
+            </div>
+
             <div class="sim-controls">
                 <div class="panel-title">
                     <span>🎮</span> Quick Controls
@@ -1095,6 +1288,50 @@
             document.getElementById('hydraulic-line').setAttribute('stroke', hydraulicColor);
         }
 
+        // ============================================================
+        // UPDATE FAILURE PROBABILITY PANEL
+        // Shows weighted probabilities and highlights failing components
+        // ============================================================
+        function updateFailureProbabilities(probabilities, failedComponents) {
+            const components = ['engine', 'hydraulic', 'wheels', 'chassis'];
+            
+            components.forEach(comp => {
+                const item = document.getElementById(`prob-${comp}`);
+                const pctElement = document.getElementById(`prob-${comp}-pct`);
+                const barElement = document.getElementById(`prob-${comp}-bar`);
+                const dotElement = document.getElementById(`prob-${comp}-dot`);
+                const statusElement = document.getElementById(`prob-${comp}-status`);
+                
+                if (!item || !probabilities) return;
+                
+                // Get probability for this component
+                const probability = probabilities[comp] || 0;
+                const pctValue = Math.round(probability * 100);
+                
+                // Update percentage display
+                pctElement.textContent = `${pctValue}%`;
+                
+                // Update bar width
+                barElement.style.width = `${pctValue}%`;
+                
+                // Check if this component is currently failing
+                const isFailing = failedComponents && failedComponents.includes(comp);
+                
+                // Update visual state
+                if (isFailing) {
+                    item.classList.add('failing');
+                    dotElement.classList.add('failing');
+                    statusElement.textContent = '⚠️ FAILING';
+                    statusElement.style.color = '#ff6b6b';
+                } else {
+                    item.classList.remove('failing');
+                    dotElement.classList.remove('failing');
+                    statusElement.textContent = 'Normal';
+                    statusElement.style.color = '#666';
+                }
+            });
+        }
+
         // Toggle injection
         async function toggleInjection() {
             try {
@@ -1162,6 +1399,9 @@
                 updateCharts(data.time_series);
                 updateTruckComponents(data.affected_components);
                 
+                // Update failure probability panel
+                updateFailureProbabilities(data.failure_probabilities, data.failed_components);
+                
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
@@ -1207,13 +1447,26 @@
         document.addEventListener('DOMContentLoaded', () => {
             initPlots();
             
-            // Get initial injection state including any active failures
+            // Get initial injection state including any active failures and probabilities
             fetch('/get_injection_state')
                 .then(r => r.json())
                 .then(data => {
                     injectionActive = data.inject_anomaly;
                     activeFailedComponents = data.failed_components || [];
                     updateInjectionUI();
+                    // Update probability panel with initial data
+                    if (data.failure_probabilities) {
+                        updateFailureProbabilities(data.failure_probabilities, data.failed_components);
+                    }
+                });
+            
+            // Also fetch probability data separately to ensure it's displayed
+            fetch('/get_failure_probabilities')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.probabilities) {
+                        updateFailureProbabilities(data.probabilities, activeFailedComponents);
+                    }
                 });
         });
     </script>

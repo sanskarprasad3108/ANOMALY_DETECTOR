@@ -31,14 +31,33 @@ COMPONENT_SENSOR_MAP = {
     'chassis': [4, 1]         # Vibration_mm_s (idx 4), Load_tons (idx 1) - structural stress
 }
 
-# Realistic failure combinations (weighted by probability)
+# ============================================================
+# WEIGHTED FAILURE PROBABILITIES
+# Based on real-world industrial failure statistics:
+# - Engine: High thermal/mechanical stress → highest failure rate
+# - Hydraulics: Fluid systems prone to leaks → medium-high
+# - Wheels: Wear items but robust → medium
+# - Chassis: Structural, rarely fails → lowest
+# ============================================================
+COMPONENT_FAILURE_WEIGHTS = {
+    'engine': 0.40,      # 40% - Highest: thermal stress, moving parts, combustion
+    'hydraulic': 0.30,   # 30% - Medium-high: fluid leaks, seal wear, pressure issues
+    'wheels': 0.20,      # 20% - Medium: brake wear, bearing issues, tire problems
+    'chassis': 0.10      # 10% - Lowest: structural, rarely fails unless extreme stress
+}
+
+# Failure scenarios with probabilities derived from component weights
+# Single failures are more common (70%), dual failures less common (30%)
 FAILURE_SCENARIOS = [
-    (['engine'], 0.30),                    # Engine-only failure (30%)
-    (['hydraulic'], 0.25),                 # Hydraulic-only failure (25%)
-    (['wheels'], 0.20),                    # Wheel/brake failure (20%)
-    (['engine', 'hydraulic'], 0.10),       # Engine + Hydraulic (10%)
-    (['wheels', 'chassis'], 0.10),         # Wheels + Chassis stress (10%)
-    (['hydraulic', 'wheels'], 0.05)        # Hydraulic + Wheels (5%)
+    # Single component failures (70% total)
+    (['engine'], 0.30),                    # Engine-only (highest weight component)
+    (['hydraulic'], 0.22),                 # Hydraulic-only
+    (['wheels'], 0.13),                    # Wheel/brake failure
+    (['chassis'], 0.05),                   # Chassis-only (rare)
+    # Dual component failures (30% total) - correlated failures
+    (['engine', 'hydraulic'], 0.12),       # Engine overheating affects hydraulic fluid
+    (['wheels', 'chassis'], 0.10),         # Wheel issues stress chassis
+    (['hydraulic', 'wheels'], 0.08)        # Hydraulic brake system failure
 ]
 
 # Global state for anomaly injection
@@ -145,8 +164,25 @@ def get_injection_state():
     with injection_state['lock']:
         return jsonify({
             'inject_anomaly': injection_state['inject_anomaly'],
-            'failed_components': injection_state['active_failures']
+            'failed_components': injection_state['active_failures'],
+            'failure_probabilities': COMPONENT_FAILURE_WEIGHTS
         })
+
+@app.route('/get_failure_probabilities')
+def get_failure_probabilities():
+    """
+    Return the failure probability weights for all components.
+    This endpoint provides static probability data for UI display.
+    """
+    return jsonify({
+        'probabilities': COMPONENT_FAILURE_WEIGHTS,
+        'description': {
+            'engine': 'High thermal/mechanical stress - most failure-prone',
+            'hydraulic': 'Fluid system leaks and seal wear',
+            'wheels': 'Brake wear and bearing issues',
+            'chassis': 'Structural - rarely fails'
+        }
+    })
 
 @app.route('/simulate_data')
 def simulate_data():
@@ -291,7 +327,8 @@ def simulate_data():
         'is_anomaly': bool(is_anomaly),
         'pca_coords': pca_coords,
         'affected_components': affected_components,
-        'failed_components': active_failures,  # NEW: Explicitly list which components are failing
+        'failed_components': active_failures,  # Currently failing components
+        'failure_probabilities': COMPONENT_FAILURE_WEIGHTS,  # Static probability weights
         'inject_active': inject,
         'time_series': {
             'timestamps': data_buffer['timestamps'][-100:],
