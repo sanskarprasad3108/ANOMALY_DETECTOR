@@ -322,7 +322,7 @@
         .truck-diagram {
             position: relative;
             width: 100%;
-            height: 280px;
+            height: 300px;
             margin: 15px 0;
             display: flex;
             align-items: center;
@@ -332,64 +332,55 @@
         .truck-svg {
             width: 100%;
             height: 100%;
-            max-width: 520px;
-            filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4));
+            max-width: 540px;
         }
 
         /* ========================================
-           DIAGNOSTIC OVERLAY ZONES
-           Semi-transparent glow areas for components
+           SVG COMPONENT GLOW STATES - CSS APPROACH
+           Applied via JavaScript class toggling
            ======================================== */
         
-        .diagnostic-zone {
-            transition: all 0.3s ease !important;
-            pointer-events: none;
+        /* Anomaly state - RED glow with pulse animation */
+        .svg-anomaly {
+            filter: drop-shadow(0 0 8px #ff0000) 
+                    drop-shadow(0 0 15px #ff3333) 
+                    drop-shadow(0 0 25px #ff5555) !important;
+            animation: svg-red-pulse 0.5s ease-in-out infinite !important;
         }
         
-        /* Normal state - soft green glow */
-        .zone-normal {
-            fill: rgba(0, 255, 136, 0.12) !important;
-            opacity: 0.4 !important;
-            filter: drop-shadow(0 0 6px rgba(0, 255, 136, 0.3)) !important;
+        /* Force anomaly on specific elements by ID */
+        #truck-engine.svg-anomaly,
+        #truck-hydraulics.svg-anomaly,
+        #truck-chassis.svg-anomaly,
+        #truck-wheels.svg-anomaly {
+            filter: drop-shadow(0 0 10px #ff0000) 
+                    drop-shadow(0 0 20px #ff2222) 
+                    drop-shadow(0 0 35px #ff4444) !important;
         }
         
-        /* Anomaly state - BRIGHT RED GLOW with pulse */
-        .zone-fault {
-            fill: rgba(255, 50, 50, 0.55) !important;
-            opacity: 0.85 !important;
-            filter: drop-shadow(0 0 25px rgba(255, 50, 50, 1)) drop-shadow(0 0 50px rgba(255, 0, 0, 0.8)) !important;
-            animation: zone-pulse-red 0.6s ease-in-out infinite !important;
-        }
-        
-        /* Warning state - amber glow */
-        .zone-warning {
-            fill: rgba(255, 170, 0, 0.3);
-            filter: drop-shadow(0 0 15px rgba(255, 170, 0, 0.6));
-            animation: zone-pulse-amber 1.2s ease-in-out infinite;
-        }
-        
-        @keyframes zone-pulse-red {
-            0%, 100% { 
-                opacity: 0.7;
-                fill: rgba(255, 50, 50, 0.5);
-                filter: drop-shadow(0 0 20px rgba(255, 50, 50, 0.9)) drop-shadow(0 0 40px rgba(255, 0, 0, 0.6));
+        @keyframes svg-red-pulse {
+            0%, 100% {
+                filter: drop-shadow(0 0 8px #ff0000) 
+                        drop-shadow(0 0 15px #ff3333) 
+                        drop-shadow(0 0 25px #ff5555);
             }
-            50% { 
-                opacity: 1;
-                fill: rgba(255, 30, 30, 0.7);
-                filter: drop-shadow(0 0 35px rgba(255, 50, 50, 1)) drop-shadow(0 0 70px rgba(255, 0, 0, 0.9));
+            50% {
+                filter: drop-shadow(0 0 15px #ff0000) 
+                        drop-shadow(0 0 30px #ff2222) 
+                        drop-shadow(0 0 50px #ff4444);
             }
         }
         
-        @keyframes zone-pulse-amber {
-            0%, 100% { 
-                opacity: 0.5;
-                filter: drop-shadow(0 0 12px rgba(255, 170, 0, 0.5));
-            }
-            50% { 
-                opacity: 0.8;
-                filter: drop-shadow(0 0 25px rgba(255, 170, 0, 0.9));
-            }
+        /* Normal state - GREEN glow */
+        .svg-normal {
+            filter: drop-shadow(0 0 5px #00ff88) !important;
+        }
+        
+        #truck-engine.svg-normal,
+        #truck-hydraulics.svg-normal,
+        #truck-chassis.svg-normal,
+        #truck-wheels.svg-normal {
+            filter: drop-shadow(0 0 4px #00ff88) drop-shadow(0 0 8px rgba(0,255,136,0.5)) !important;
         }
 
         /* ========================================
@@ -420,7 +411,7 @@
             flex-shrink: 0;
         }
 
-        /* Normal state styling */
+        /* Normal/Healthy state styling - GREEN */
         .component-normal {
             background: rgba(0, 255, 136, 0.15);
             border: 1.5px solid rgba(0, 255, 136, 0.6);
@@ -433,62 +424,62 @@
             box-shadow: 0 0 10px #00ff88, 0 0 20px rgba(0, 255, 136, 0.5);
         }
 
-        /* Fault/Anomaly state styling */
+        /* Fault/Anomaly state styling - RED with pulse */
         .component-fault {
             background: rgba(255, 68, 68, 0.25);
-            border: 1.5px solid rgba(255, 68, 68, 0.8);
+            border: 2px solid rgba(255, 68, 68, 0.9);
             color: #ff6b6b;
-            box-shadow: 0 4px 20px rgba(255, 68, 68, 0.4);
-            animation: label-pulse-fault 0.6s ease-in-out infinite;
+            box-shadow: 0 4px 25px rgba(255, 68, 68, 0.5);
+            animation: label-pulse-fault 0.5s ease-in-out infinite;
         }
 
         .component-fault .component-dot {
             background: #ff4444;
-            box-shadow: 0 0 12px #ff4444, 0 0 24px rgba(255, 68, 68, 0.7);
-            animation: dot-blink 0.4s ease-in-out infinite;
+            box-shadow: 0 0 15px #ff4444, 0 0 30px rgba(255, 68, 68, 0.8);
+            animation: dot-blink 0.3s ease-in-out infinite;
         }
         
         @keyframes label-pulse-fault {
             0%, 100% { 
-                box-shadow: 0 4px 15px rgba(255, 68, 68, 0.3);
+                box-shadow: 0 4px 20px rgba(255, 68, 68, 0.4);
                 transform: scale(1);
             }
             50% { 
-                box-shadow: 0 4px 30px rgba(255, 68, 68, 0.6);
-                transform: scale(1.02);
+                box-shadow: 0 4px 35px rgba(255, 68, 68, 0.7);
+                transform: scale(1.03);
             }
         }
         
         @keyframes dot-blink {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            50% { opacity: 0.4; }
         }
 
-        /* Label positioning - optimized for flat truck design */
+        /* Label positioning - optimized for new SVG layout */
         #engine-label { 
-            top: 35px; 
-            left: 8%; 
+            top: 25px; 
+            left: 5%; 
         }
         #hydraulic-label { 
-            top: 35px; 
-            right: 15%; 
+            top: 25px; 
+            right: 12%; 
         }
         #chassis-label { 
-            bottom: 55px; 
+            bottom: 45px; 
             left: 50%;
             transform: translateX(-50%);
         }
         #wheels-label { 
-            bottom: 15px; 
-            right: 18%; 
+            bottom: 10px; 
+            right: 15%; 
         }
         
         /* Responsive label positioning */
         @media (max-width: 600px) {
-            #engine-label { left: 5%; top: 25px; }
-            #hydraulic-label { right: 5%; top: 25px; }
-            #chassis-label { bottom: 45px; }
-            #wheels-label { right: 10%; bottom: 10px; }
+            #engine-label { left: 2%; top: 20px; }
+            #hydraulic-label { right: 2%; top: 20px; }
+            #chassis-label { bottom: 40px; }
+            #wheels-label { right: 8%; bottom: 5px; }
         }
 
         /* Right Panel - Sensor Readings */
@@ -794,172 +785,185 @@
                 </div>
                 <div class="truck-diagram">
                     <!-- ========================================
-                         FLAT VECTOR DUMP TRUCK - Industrial Style
-                         Modern colored illustration with diagnostic overlays
+                         REBUILT SVG DUMP TRUCK - Component-Based Glow System
+                         Each component has EXPLICIT IDs for anomaly visualization
+                         GREEN glow = healthy, RED glow = anomaly detected
                          ======================================== -->
-                    <svg class="truck-svg" viewBox="0 0 520 240" preserveAspectRatio="xMidYMid meet">
+                    <svg id="dump-truck" class="truck-svg" viewBox="0 0 520 260" preserveAspectRatio="xMidYMid meet">
                         <defs>
-                            <!-- Gradient definitions for depth -->
+                            <!-- ============================================
+                                 SVG GLOW FILTERS - WORKING DROP SHADOW APPROACH
+                                 These filters create VISIBLE glow effects
+                                 ============================================ -->
+                            
+                            <!-- GREEN GLOW FILTER - Applied when component is HEALTHY -->
+                            <filter id="glow-green" x="-40%" y="-40%" width="180%" height="180%" filterUnits="objectBoundingBox">
+                                <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#00ff88" flood-opacity="0.8"/>
+                            </filter>
+                            
+                            <!-- RED GLOW FILTER - Applied when ANOMALY DETECTED -->
+                            <filter id="glow-red" x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox">
+                                <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#ff0000" flood-opacity="1"/>
+                                <feDropShadow dx="0" dy="0" stdDeviation="15" flood-color="#ff3333" flood-opacity="0.7"/>
+                            </filter>
+                            
+                            <!-- ANIMATED RED PULSE - Using CSS animation instead -->
+                            <filter id="glow-red-pulse" x="-60%" y="-60%" width="220%" height="220%" filterUnits="objectBoundingBox">
+                                <feDropShadow dx="0" dy="0" stdDeviation="10" flood-color="#ff0000" flood-opacity="1"/>
+                                <feDropShadow dx="0" dy="0" stdDeviation="20" flood-color="#ff2222" flood-opacity="0.8"/>
+                                <feDropShadow dx="0" dy="0" stdDeviation="30" flood-color="#ff4444" flood-opacity="0.5"/>
+                            </filter>
+                            
+                            <!-- Gradient definitions for truck parts -->
                             <linearGradient id="cabinGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" style="stop-color:#F5A623;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#D4880F;stop-opacity:1" />
+                                <stop offset="0%" stop-color="#F5A623"/>
+                                <stop offset="100%" stop-color="#D4880F"/>
                             </linearGradient>
                             <linearGradient id="bedGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:#F7C948;stop-opacity:1" />
-                                <stop offset="50%" style="stop-color:#F5B800;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#D4940A;stop-opacity:1" />
+                                <stop offset="0%" stop-color="#F7C948"/>
+                                <stop offset="50%" stop-color="#F5B800"/>
+                                <stop offset="100%" stop-color="#D4940A"/>
                             </linearGradient>
                             <linearGradient id="chassisGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:#4A4A4A;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#2D2D2D;stop-opacity:1" />
+                                <stop offset="0%" stop-color="#5A5A5A"/>
+                                <stop offset="100%" stop-color="#3D3D3D"/>
                             </linearGradient>
                             <linearGradient id="wheelGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:#3D3D3D;stop-opacity:1" />
-                                <stop offset="50%" style="stop-color:#1A1A1A;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#2A2A2A;stop-opacity:1" />
+                                <stop offset="0%" stop-color="#4D4D4D"/>
+                                <stop offset="50%" stop-color="#2A2A2A"/>
+                                <stop offset="100%" stop-color="#3A3A3A"/>
                             </linearGradient>
                             <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:0.9" />
-                                <stop offset="50%" style="stop-color:#5CB8E8;stop-opacity:0.85" />
-                                <stop offset="100%" style="stop-color:#4AA8D8;stop-opacity:0.9" />
+                                <stop offset="0%" stop-color="#87CEEB" stop-opacity="0.9"/>
+                                <stop offset="100%" stop-color="#4AA8D8" stop-opacity="0.9"/>
                             </linearGradient>
                             <linearGradient id="loadGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:#9E8B7D;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#7A6B5F;stop-opacity:1" />
+                                <stop offset="0%" stop-color="#9E8B7D"/>
+                                <stop offset="100%" stop-color="#7A6B5F"/>
                             </linearGradient>
-                            <!-- Glow filters for diagnostic overlays -->
-                            <filter id="glowGreen" x="-50%" y="-50%" width="200%" height="200%">
-                                <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#00ff88" flood-opacity="0.6"/>
-                            </filter>
-                            
-                            <!-- RED GLOW FILTER - Applied to truck part groups when anomaly detected -->
-                            <filter id="glowRed" x="-100%" y="-100%" width="300%" height="300%">
-                                <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#ff0000" flood-opacity="1"/>
-                                <feDropShadow dx="0" dy="0" stdDeviation="15" flood-color="#ff3333" flood-opacity="0.8"/>
-                                <feDropShadow dx="0" dy="0" stdDeviation="25" flood-color="#ff5555" flood-opacity="0.5"/>
-                            </filter>
-                            
-                            <!-- Animated red pulse filter -->
-                            <filter id="glowRedPulse" x="-100%" y="-100%" width="300%" height="300%">
-                                <feDropShadow dx="0" dy="0" stdDeviation="12" flood-color="#ff0000" flood-opacity="1">
-                                    <animate attributeName="stdDeviation" values="8;15;8" dur="0.6s" repeatCount="indefinite"/>
-                                </feDropShadow>
-                                <feDropShadow dx="0" dy="0" stdDeviation="20" flood-color="#ff3333" flood-opacity="0.7">
-                                    <animate attributeName="stdDeviation" values="15;25;15" dur="0.6s" repeatCount="indefinite"/>
-                                </feDropShadow>
-                            </filter>
                         </defs>
                         
                         <!-- ======== GROUND SHADOW ======== -->
-                        <ellipse cx="270" cy="218" rx="200" ry="12" fill="rgba(0,0,0,0.3)"/>
+                        <ellipse cx="270" cy="238" rx="210" ry="14" fill="rgba(0,0,0,0.35)"/>
                         
-                        <!-- ======== CHASSIS / FRAME ======== -->
-                        <g id="chassis-group">
-                            <!-- Main chassis beam -->
-                            <rect x="55" y="155" width="380" height="18" rx="4" fill="url(#chassisGradient)"/>
-                            <!-- Front axle housing -->
-                            <rect x="80" y="168" width="45" height="12" rx="3" fill="#3A3A3A"/>
-                            <!-- Rear axle housing -->
-                            <rect x="295" y="168" width="100" height="12" rx="3" fill="#3A3A3A"/>
-                            <!-- Chassis diagnostic overlay zone -->
-                            <rect id="chassis-zone" class="diagnostic-zone zone-normal" x="55" y="150" width="380" height="30" rx="6"/>
+                        <!-- ============================================
+                             COMPONENT: CHASSIS
+                             ID: truck-chassis
+                             Sensors: VIBRATION, LOAD
+                             ============================================ -->
+                        <g id="truck-chassis" class="svg-normal">
+                            <!-- Main chassis frame -->
+                            <rect x="55" y="168" width="390" height="22" rx="4" fill="url(#chassisGradient)" stroke="#2D2D2D" stroke-width="2"/>
+                            <!-- Front axle mount -->
+                            <rect x="75" y="183" width="55" height="15" rx="4" fill="#4A4A4A" stroke="#333" stroke-width="1"/>
+                            <!-- Rear axle mount -->
+                            <rect x="290" y="183" width="115" height="15" rx="4" fill="#4A4A4A" stroke="#333" stroke-width="1"/>
+                            <!-- Cross members -->
+                            <rect x="170" y="172" width="8" height="14" fill="#3D3D3D"/>
+                            <rect x="250" y="172" width="8" height="14" fill="#3D3D3D"/>
                         </g>
                         
-                        <!-- ======== DUMP BED (Tipper Body) ======== -->
-                        <g id="hydraulic-group">
-                            <!-- Bed base -->
-                            <path d="M180 65 L180 150 L440 150 L470 65 Z" fill="url(#bedGradient)" stroke="#C4A000" stroke-width="2"/>
-                            <!-- Bed reinforcement stripes -->
-                            <line x1="210" y1="70" x2="195" y2="145" stroke="#D4940A" stroke-width="3"/>
-                            <line x1="260" y1="70" x2="235" y2="145" stroke="#D4940A" stroke-width="3"/>
-                            <line x1="310" y1="70" x2="275" y2="145" stroke="#D4940A" stroke-width="3"/>
-                            <line x1="360" y1="70" x2="315" y2="145" stroke="#D4940A" stroke-width="3"/>
-                            <line x1="410" y1="70" x2="355" y2="145" stroke="#D4940A" stroke-width="3"/>
-                            <!-- Bed top rail -->
-                            <rect x="178" y="58" width="295" height="10" rx="2" fill="#E8B600"/>
-                            <!-- Load material (gravel/dirt) -->
-                            <ellipse cx="320" cy="55" rx="120" ry="22" fill="url(#loadGradient)"/>
-                            <ellipse cx="290" cy="48" rx="80" ry="14" fill="#8B7D6B"/>
-                            <ellipse cx="350" cy="50" rx="60" ry="12" fill="#7A6B5F"/>
-                            <!-- Hydraulic cylinder -->
-                            <rect x="185" y="120" width="10" height="35" rx="2" fill="#6B6B6B"/>
-                            <rect x="183" y="115" width="14" height="8" rx="2" fill="#888"/>
-                            <!-- Hydraulic diagnostic overlay zone -->
-                            <rect id="hydraulic-zone" class="diagnostic-zone zone-normal" x="175" y="50" width="300" height="108" rx="8"/>
+                        <!-- ============================================
+                             COMPONENT: HYDRAULICS (Dump Bed)
+                             ID: truck-hydraulics  
+                             Sensors: HYDRAULIC PRESSURE, LOAD
+                             ============================================ -->
+                        <g id="truck-hydraulics" class="svg-normal">
+                            <!-- Dump bed body -->
+                            <path d="M185 70 L185 162 L455 162 L485 70 Z" fill="url(#bedGradient)" stroke="#C4A000" stroke-width="2.5"/>
+                            <!-- Bed reinforcement ribs -->
+                            <line x1="215" y1="75" x2="200" y2="157" stroke="#D4940A" stroke-width="4"/>
+                            <line x1="265" y1="75" x2="242" y2="157" stroke="#D4940A" stroke-width="4"/>
+                            <line x1="315" y1="75" x2="284" y2="157" stroke="#D4940A" stroke-width="4"/>
+                            <line x1="365" y1="75" x2="326" y2="157" stroke="#D4940A" stroke-width="4"/>
+                            <line x1="415" y1="75" x2="368" y2="157" stroke="#D4940A" stroke-width="4"/>
+                            <line x1="460" y1="75" x2="405" y2="157" stroke="#D4940A" stroke-width="4"/>
+                            <!-- Top rail -->
+                            <rect x="183" y="62" width="305" height="12" rx="3" fill="#E8B600" stroke="#C4A000" stroke-width="1"/>
+                            <!-- Load material (gravel) -->
+                            <ellipse cx="330" cy="58" rx="125" ry="24" fill="url(#loadGradient)"/>
+                            <ellipse cx="300" cy="50" rx="85" ry="16" fill="#8B7D6B"/>
+                            <ellipse cx="360" cy="52" rx="65" ry="14" fill="#7A6B5F"/>
+                            <!-- Hydraulic cylinder assembly -->
+                            <rect x="190" y="125" width="14" height="42" rx="3" fill="#777" stroke="#555" stroke-width="1"/>
+                            <rect x="187" y="118" width="20" height="10" rx="2" fill="#999" stroke="#666" stroke-width="1"/>
+                            <circle cx="197" cy="123" r="4" fill="#888"/>
                         </g>
                         
-                        <!-- ======== CABIN ======== -->
-                        <g id="engine-group">
-                            <!-- Cabin main body -->
-                            <path d="M50 85 L50 155 L175 155 L175 75 L120 55 L70 55 L50 75 Z" fill="url(#cabinGradient)" stroke="#C4880F" stroke-width="2"/>
+                        <!-- ============================================
+                             COMPONENT: ENGINE (Cabin)
+                             ID: truck-engine
+                             Sensors: ENGINE TEMP, OIL PRESSURE, FUEL RATE
+                             ============================================ -->
+                        <g id="truck-engine" class="svg-normal">
+                            <!-- Cabin body -->
+                            <path d="M48 92 L48 165 L180 165 L180 80 L125 55 L68 55 L48 78 Z" fill="url(#cabinGradient)" stroke="#C4880F" stroke-width="2.5"/>
                             <!-- Cabin roof -->
-                            <rect x="65" y="48" width="60" height="10" rx="4" fill="#E89A1C"/>
-                            <!-- Door panel line -->
-                            <line x1="90" y1="80" x2="90" y2="150" stroke="#C4880F" stroke-width="2"/>
+                            <rect x="63" y="46" width="68" height="12" rx="5" fill="#E89A1C" stroke="#D4880F" stroke-width="1"/>
+                            <!-- Door outline -->
+                            <rect x="92" y="78" width="82" height="82" rx="3" fill="none" stroke="#C4880F" stroke-width="2"/>
                             <!-- Door handle -->
-                            <rect x="95" y="115" width="18" height="5" rx="2" fill="#888"/>
+                            <rect x="100" y="118" width="22" height="7" rx="3" fill="#888" stroke="#666" stroke-width="1"/>
                             <!-- Front windshield -->
-                            <path d="M55 78 L70 60 L115 60 L115 78 Z" fill="url(#glassGradient)" stroke="#4AA8D8" stroke-width="1.5"/>
+                            <path d="M54 82 L70 60 L120 60 L120 82 Z" fill="url(#glassGradient)" stroke="#4AA8D8" stroke-width="2"/>
                             <!-- Side window -->
-                            <rect x="95" y="62" width="75" height="45" rx="4" fill="url(#glassGradient)" stroke="#4AA8D8" stroke-width="1.5"/>
+                            <rect x="98" y="64" width="78" height="48" rx="4" fill="url(#glassGradient)" stroke="#4AA8D8" stroke-width="2"/>
                             <!-- Window divider -->
-                            <line x1="135" y1="62" x2="135" y2="107" stroke="#C4880F" stroke-width="2"/>
+                            <line x1="140" y1="64" x2="140" y2="112" stroke="#C4880F" stroke-width="3"/>
                             <!-- Headlight -->
-                            <ellipse cx="54" cy="130" rx="8" ry="10" fill="#FFFDE7" stroke="#FFD54F" stroke-width="2"/>
-                            <ellipse cx="54" cy="130" rx="4" ry="5" fill="#FFF9C4"/>
+                            <ellipse cx="52" cy="138" rx="10" ry="12" fill="#FFFDE7" stroke="#FFD54F" stroke-width="2"/>
+                            <ellipse cx="52" cy="138" rx="5" ry="6" fill="#FFF9C4"/>
                             <!-- Side mirror -->
-                            <rect x="42" y="72" width="6" height="20" rx="2" fill="#3A3A3A"/>
-                            <rect x="35" y="75" width="10" height="12" rx="2" fill="#5CB8E8"/>
+                            <rect x="38" y="75" width="8" height="24" rx="2" fill="#3A3A3A"/>
+                            <rect x="30" y="79" width="12" height="15" rx="2" fill="#5CB8E8" stroke="#4AA8D8" stroke-width="1"/>
                             <!-- Exhaust stack -->
-                            <rect x="155" y="35" width="8" height="45" rx="2" fill="#4A4A4A"/>
-                            <ellipse cx="159" cy="35" rx="5" ry="3" fill="#3A3A3A"/>
+                            <rect x="160" y="32" width="10" height="50" rx="3" fill="#4A4A4A" stroke="#333" stroke-width="1"/>
+                            <ellipse cx="165" cy="32" rx="6" ry="4" fill="#3A3A3A"/>
                             <!-- Front bumper -->
-                            <rect x="42" y="148" width="135" height="10" rx="3" fill="#3A3A3A"/>
+                            <rect x="38" y="158" width="145" height="12" rx="4" fill="#3A3A3A" stroke="#2D2D2D" stroke-width="1"/>
                             <!-- Front grille -->
-                            <rect x="48" y="135" width="25" height="15" rx="2" fill="#2D2D2D"/>
-                            <line x1="52" y1="137" x2="52" y2="148" stroke="#4A4A4A" stroke-width="2"/>
-                            <line x1="58" y1="137" x2="58" y2="148" stroke="#4A4A4A" stroke-width="2"/>
-                            <line x1="64" y1="137" x2="64" y2="148" stroke="#4A4A4A" stroke-width="2"/>
-                            <!-- Engine diagnostic overlay zone -->
-                            <rect id="engine-zone" class="diagnostic-zone zone-normal" x="42" y="50" width="140" height="115" rx="8"/>
+                            <rect x="45" y="142" width="30" height="18" rx="3" fill="#2D2D2D"/>
+                            <line x1="50" y1="145" x2="50" y2="157" stroke="#4A4A4A" stroke-width="3"/>
+                            <line x1="58" y1="145" x2="58" y2="157" stroke="#4A4A4A" stroke-width="3"/>
+                            <line x1="66" y1="145" x2="66" y2="157" stroke="#4A4A4A" stroke-width="3"/>
+                            <!-- Engine hood detail -->
+                            <rect x="48" y="130" width="25" height="14" rx="2" fill="#D4880F"/>
                         </g>
                         
-                        <!-- ======== WHEELS ======== -->
-                        <g id="wheels-group">
-                            <!-- Front wheel -->
-                            <circle cx="102" cy="185" r="32" fill="url(#wheelGradient)" stroke="#1A1A1A" stroke-width="3"/>
-                            <circle cx="102" cy="185" r="22" fill="#2D2D2D"/>
-                            <circle cx="102" cy="185" r="12" fill="#4A4A4A" stroke="#5A5A5A" stroke-width="2"/>
-                            <circle cx="102" cy="185" r="5" fill="#6A6A6A"/>
-                            <!-- Front wheel tread marks -->
-                            <circle cx="102" cy="185" r="28" fill="none" stroke="#2A2A2A" stroke-width="4" stroke-dasharray="8 6"/>
+                        <!-- ============================================
+                             COMPONENT: WHEELS
+                             ID: truck-wheels
+                             Sensors: VIBRATION, BRAKE TEMP, SPEED
+                             ============================================ -->
+                        <g id="truck-wheels" class="svg-normal">
+                            <!-- FRONT WHEEL -->
+                            <g id="wheel-front">
+                                <circle cx="102" cy="202" r="36" fill="url(#wheelGradient)" stroke="#1A1A1A" stroke-width="4"/>
+                                <circle cx="102" cy="202" r="26" fill="#2D2D2D"/>
+                                <circle cx="102" cy="202" r="14" fill="#4A4A4A" stroke="#5A5A5A" stroke-width="2"/>
+                                <circle cx="102" cy="202" r="6" fill="#6A6A6A"/>
+                                <!-- Tread pattern -->
+                                <circle cx="102" cy="202" r="32" fill="none" stroke="#222" stroke-width="5" stroke-dasharray="10 7"/>
+                            </g>
                             
-                            <!-- Rear wheel 1 -->
-                            <circle cx="315" cy="185" r="32" fill="url(#wheelGradient)" stroke="#1A1A1A" stroke-width="3"/>
-                            <circle cx="315" cy="185" r="22" fill="#2D2D2D"/>
-                            <circle cx="315" cy="185" r="12" fill="#4A4A4A" stroke="#5A5A5A" stroke-width="2"/>
-                            <circle cx="315" cy="185" r="5" fill="#6A6A6A"/>
-                            <circle cx="315" cy="185" r="28" fill="none" stroke="#2A2A2A" stroke-width="4" stroke-dasharray="8 6"/>
+                            <!-- REAR WHEEL 1 -->
+                            <g id="wheel-rear1">
+                                <circle cx="318" cy="202" r="36" fill="url(#wheelGradient)" stroke="#1A1A1A" stroke-width="4"/>
+                                <circle cx="318" cy="202" r="26" fill="#2D2D2D"/>
+                                <circle cx="318" cy="202" r="14" fill="#4A4A4A" stroke="#5A5A5A" stroke-width="2"/>
+                                <circle cx="318" cy="202" r="6" fill="#6A6A6A"/>
+                                <circle cx="318" cy="202" r="32" fill="none" stroke="#222" stroke-width="5" stroke-dasharray="10 7"/>
+                            </g>
                             
-                            <!-- Rear wheel 2 -->
-                            <circle cx="385" cy="185" r="32" fill="url(#wheelGradient)" stroke="#1A1A1A" stroke-width="3"/>
-                            <circle cx="385" cy="185" r="22" fill="#2D2D2D"/>
-                            <circle cx="385" cy="185" r="12" fill="#4A4A4A" stroke="#5A5A5A" stroke-width="2"/>
-                            <circle cx="385" cy="185" r="5" fill="#6A6A6A"/>
-                            <circle cx="385" cy="185" r="28" fill="none" stroke="#2A2A2A" stroke-width="4" stroke-dasharray="8 6"/>
-                            
-                            <!-- Wheel diagnostic overlay zone (under wheels) -->
-                            <ellipse id="wheels-zone" class="diagnostic-zone zone-normal" cx="260" cy="185" rx="180" ry="38"/>
+                            <!-- REAR WHEEL 2 -->
+                            <g id="wheel-rear2">
+                                <circle cx="392" cy="202" r="36" fill="url(#wheelGradient)" stroke="#1A1A1A" stroke-width="4"/>
+                                <circle cx="392" cy="202" r="26" fill="#2D2D2D"/>
+                                <circle cx="392" cy="202" r="14" fill="#4A4A4A" stroke="#5A5A5A" stroke-width="2"/>
+                                <circle cx="392" cy="202" r="6" fill="#6A6A6A"/>
+                                <circle cx="392" cy="202" r="32" fill="none" stroke="#222" stroke-width="5" stroke-dasharray="10 7"/>
+                            </g>
                         </g>
-                        
-                        <!-- ======== WHEEL STROKE INDICATORS (for JS updates) ======== -->
-                        <circle id="wheel-fl" cx="102" cy="185" r="32" fill="none" stroke="transparent" stroke-width="4"/>
-                        <circle id="wheel-rl" cx="315" cy="185" r="32" fill="none" stroke="transparent" stroke-width="4"/>
-                        <circle id="wheel-rr" cx="385" cy="185" r="32" fill="none" stroke="transparent" stroke-width="4"/>
-                        
-                        <!-- Hidden elements for JS compatibility -->
-                        <rect id="engine-area" x="42" y="50" width="140" height="115" fill="none" stroke="transparent"/>
-                        <line id="hydraulic-line" x1="175" y1="50" x2="475" y2="50" stroke="transparent" stroke-width="1"/>
                     </svg>
                     
                     <!-- ======== FLOATING DIAGNOSTIC LABELS ======== -->
@@ -1256,97 +1260,72 @@
         }
 
         // ============================================================
-        // UPDATE TRUCK COMPONENTS - APPLY GLOW TO ACTUAL TRUCK PARTS
-        // Uses SVG filter on the VISUAL groups, not invisible overlays
+        // UPDATE TRUCK COMPONENTS - APPLY GLOW VIA CSS CLASSES ONLY
+        // CSS drop-shadow is more reliable than SVG filters
         // ============================================================
         function updateTruckComponents(affected) {
-            // EXACT ID MAPPING - Backend key → ACTUAL VISUAL TRUCK PART GROUP
-            const COMPONENT_TO_GROUP_ID = {
-                'engine': 'engine-group',       // The actual cabin/engine SVG group
-                'hydraulic': 'hydraulic-group', // The actual dump bed SVG group
-                'chassis': 'chassis-group',     // The actual chassis SVG group
-                'wheels': 'wheels-group'        // The actual wheels SVG group
+            // EXACT MAPPING: Backend key → SVG group ID
+            const COMPONENT_MAP = {
+                'engine': 'truck-engine',
+                'hydraulic': 'truck-hydraulics',
+                'chassis': 'truck-chassis',
+                'wheels': 'truck-wheels'
             };
             
-            const COMPONENT_TO_ZONE_ID = {
-                'engine': 'engine-zone',
-                'hydraulic': 'hydraulic-zone',
-                'chassis': 'chassis-zone',
-                'wheels': 'wheels-zone'
-            };
-            
-            const COMPONENT_TO_LABEL_ID = {
+            // EXACT MAPPING: Backend key → Label ID
+            const LABEL_MAP = {
                 'engine': 'engine-label',
                 'hydraulic': 'hydraulic-label',
                 'chassis': 'chassis-label',
                 'wheels': 'wheels-label'
             };
             
-            // STEP 1: Process each component
-            Object.keys(COMPONENT_TO_GROUP_ID).forEach(comp => {
-                const groupId = COMPONENT_TO_GROUP_ID[comp];
-                const zoneId = COMPONENT_TO_ZONE_ID[comp];
-                const labelId = COMPONENT_TO_LABEL_ID[comp];
+            // Debug: Log what we received from backend
+            console.log('[updateTruckComponents] affected_components:', JSON.stringify(affected));
+            
+            // Process EACH component independently
+            Object.keys(COMPONENT_MAP).forEach(componentKey => {
+                const svgGroupId = COMPONENT_MAP[componentKey];
+                const labelId = LABEL_MAP[componentKey];
                 
-                const group = document.getElementById(groupId);  // ACTUAL VISUAL PART
-                const zone = document.getElementById(zoneId);    // Overlay zone
-                const label = document.getElementById(labelId);  // Floating label
+                // Get DOM elements
+                const svgGroup = document.getElementById(svgGroupId);
+                const label = document.getElementById(labelId);
                 
-                const hasAnomaly = affected && affected[comp] === true;
-                
-                // FORCE update floating label
-                if (label) {
-                    label.className = hasAnomaly 
-                        ? 'component-label component-fault' 
-                        : 'component-label component-normal';
-                }
+                // Determine if this component has an anomaly
+                const hasAnomaly = affected && affected[componentKey] === true;
                 
                 // =====================================================
-                // KEY FIX: Apply SVG filter DIRECTLY to truck part group
-                // This makes the ACTUAL YELLOW PARTS glow red!
+                // APPLY GLOW USING CSS CLASSES ONLY (more reliable)
                 // =====================================================
-                if (group) {
+                if (svgGroup) {
+                    // Remove SVG filter attribute completely
+                    svgGroup.removeAttribute('filter');
+                    
+                    // Remove all glow classes first
+                    svgGroup.classList.remove('svg-anomaly', 'svg-normal');
+                    
                     if (hasAnomaly) {
-                        // Apply red glow filter to the ACTUAL TRUCK PART
-                        group.style.filter = 'url(#glowRedPulse)';
-                        group.style.transition = 'filter 0.3s ease';
+                        // ANOMALY: Apply RED glow via CSS class
+                        svgGroup.classList.add('svg-anomaly');
+                        console.log(`✅ [${componentKey}] RED GLOW APPLIED`);
                     } else {
-                        // Remove filter - show normal state
-                        group.style.filter = '';
+                        // HEALTHY: Apply GREEN glow via CSS class
+                        svgGroup.classList.add('svg-normal');
                     }
+                } else {
+                    console.error(`❌ [${componentKey}] SVG group NOT FOUND: ${svgGroupId}`);
                 }
                 
-                // Also update overlay zone for additional visual feedback
-                if (zone) {
-                    zone.classList.remove('zone-normal', 'zone-fault', 'zone-warning');
+                // Update floating label
+                if (label) {
                     if (hasAnomaly) {
-                        zone.classList.add('zone-fault');
-                        zone.style.fill = 'rgba(255, 50, 50, 0.5)';
-                        zone.style.opacity = '0.8';
+                        label.className = 'component-label component-fault';
                     } else {
-                        zone.classList.add('zone-normal');
-                        zone.style.fill = '';
-                        zone.style.opacity = '';
+                        label.className = 'component-label component-normal';
                     }
                 }
             });
-
-            // Update wheel stroke indicators (for additional visual feedback)
-            const wheelColor = affected.wheels ? '#ff4444' : 'transparent';
-            const wheelStroke = affected.wheels ? '4' : '0';
-            document.getElementById('wheel-fl').setAttribute('stroke', wheelColor);
-            document.getElementById('wheel-fl').setAttribute('stroke-width', wheelStroke);
-            document.getElementById('wheel-rl').setAttribute('stroke', wheelColor);
-            document.getElementById('wheel-rl').setAttribute('stroke-width', wheelStroke);
-            document.getElementById('wheel-rr').setAttribute('stroke', wheelColor);
-            document.getElementById('wheel-rr').setAttribute('stroke-width', wheelStroke);
-            
-            // Legacy element updates (kept for compatibility)
-            const engineColor = affected.engine ? '#ff4444' : 'transparent';
-            document.getElementById('engine-area').setAttribute('stroke', engineColor);
-            
-            const hydraulicColor = affected.hydraulic ? '#ff4444' : 'transparent';
-            document.getElementById('hydraulic-line').setAttribute('stroke', hydraulicColor);
         }
 
         // ============================================================

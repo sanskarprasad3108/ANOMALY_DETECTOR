@@ -296,8 +296,8 @@ def simulate_data():
     
     # ============================================================
     # COMPONENT STATUS DETERMINATION
-    # A component is affected ONLY if one of its sensors is in anomalous_parameters
-    # This ensures precise fault isolation - not all components turn red
+    # When injection is active, DIRECTLY use the active_failures list
+    # Otherwise, determine from anomalous sensor parameters
     # ============================================================
     affected_components = {
         'engine': False,
@@ -306,31 +306,38 @@ def simulate_data():
         'wheels': False
     }
     
-    # Map display names back to component ownership
-    # Only mark a component as affected if its sensor is ACTUALLY anomalous
-    SENSOR_TO_COMPONENT = {
-        'ENGINE TEMP °C': 'engine',
-        'OIL PRESSURE BAR': 'engine',
-        'FUEL RATE L/H': 'engine',
-        'HYDRAULIC PRESSURE BAR': 'hydraulic',
-        'LOAD TONS': 'hydraulic',  # Also affects chassis
-        'VIBRATION MM/S': 'wheels',  # Also affects chassis
-        'BRAKE TEMP °C': 'wheels',
-        'SPEED KM/H': 'wheels'
-    }
-    
-    # Secondary component mappings (some sensors affect multiple components)
-    SENSOR_SECONDARY_COMPONENT = {
-        'LOAD TONS': 'chassis',
-        'VIBRATION MM/S': 'chassis'
-    }
-    
-    # Set affected components based on ACTUAL anomalous parameters
-    for param in anomalous_parameters:
-        if param in SENSOR_TO_COMPONENT:
-            affected_components[SENSOR_TO_COMPONENT[param]] = True
-        if param in SENSOR_SECONDARY_COMPONENT:
-            affected_components[SENSOR_SECONDARY_COMPONENT[param]] = True
+    # PRIORITY 1: If injection is active, DIRECTLY mark the injected components
+    if inject and active_failures:
+        for comp in active_failures:
+            if comp in affected_components:
+                affected_components[comp] = True
+        print(f"[INJECTION ACTIVE] affected_components set to: {affected_components}")
+    else:
+        # PRIORITY 2: Determine from anomalous sensor readings
+        # Map display names back to component ownership
+        SENSOR_TO_COMPONENT = {
+            'ENGINE TEMP °C': 'engine',
+            'OIL PRESSURE BAR': 'engine',
+            'FUEL RATE L/H': 'engine',
+            'HYDRAULIC PRESSURE BAR': 'hydraulic',
+            'LOAD TONS': 'hydraulic',  # Also affects chassis
+            'VIBRATION MM/S': 'wheels',  # Also affects chassis
+            'BRAKE TEMP °C': 'wheels',
+            'SPEED KM/H': 'wheels'
+        }
+        
+        # Secondary component mappings (some sensors affect multiple components)
+        SENSOR_SECONDARY_COMPONENT = {
+            'LOAD TONS': 'chassis',
+            'VIBRATION MM/S': 'chassis'
+        }
+        
+        # Set affected components based on ACTUAL anomalous parameters
+        for param in anomalous_parameters:
+            if param in SENSOR_TO_COMPONENT:
+                affected_components[SENSOR_TO_COMPONENT[param]] = True
+            if param in SENSOR_SECONDARY_COMPONENT:
+                affected_components[SENSOR_SECONDARY_COMPONENT[param]] = True
     
     # Build response with enhanced component information
     response = {
