@@ -829,18 +829,24 @@
                             </linearGradient>
                             <!-- Glow filters for diagnostic overlays -->
                             <filter id="glowGreen" x="-50%" y="-50%" width="200%" height="200%">
-                                <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-                                <feMerge>
-                                    <feMergeNode in="coloredBlur"/>
-                                    <feMergeNode in="SourceGraphic"/>
-                                </feMerge>
+                                <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#00ff88" flood-opacity="0.6"/>
                             </filter>
-                            <filter id="glowRed" x="-50%" y="-50%" width="200%" height="200%">
-                                <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
-                                <feMerge>
-                                    <feMergeNode in="coloredBlur"/>
-                                    <feMergeNode in="SourceGraphic"/>
-                                </feMerge>
+                            
+                            <!-- RED GLOW FILTER - Applied to truck part groups when anomaly detected -->
+                            <filter id="glowRed" x="-100%" y="-100%" width="300%" height="300%">
+                                <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#ff0000" flood-opacity="1"/>
+                                <feDropShadow dx="0" dy="0" stdDeviation="15" flood-color="#ff3333" flood-opacity="0.8"/>
+                                <feDropShadow dx="0" dy="0" stdDeviation="25" flood-color="#ff5555" flood-opacity="0.5"/>
+                            </filter>
+                            
+                            <!-- Animated red pulse filter -->
+                            <filter id="glowRedPulse" x="-100%" y="-100%" width="300%" height="300%">
+                                <feDropShadow dx="0" dy="0" stdDeviation="12" flood-color="#ff0000" flood-opacity="1">
+                                    <animate attributeName="stdDeviation" values="8;15;8" dur="0.6s" repeatCount="indefinite"/>
+                                </feDropShadow>
+                                <feDropShadow dx="0" dy="0" stdDeviation="20" flood-color="#ff3333" flood-opacity="0.7">
+                                    <animate attributeName="stdDeviation" values="15;25;15" dur="0.6s" repeatCount="indefinite"/>
+                                </feDropShadow>
                             </filter>
                         </defs>
                         
@@ -1250,11 +1256,18 @@
         }
 
         // ============================================================
-        // UPDATE TRUCK COMPONENTS - FORCE DOM MANIPULATION
-        // DIRECTLY targets real SVG zone IDs with explicit styling
+        // UPDATE TRUCK COMPONENTS - APPLY GLOW TO ACTUAL TRUCK PARTS
+        // Uses SVG filter on the VISUAL groups, not invisible overlays
         // ============================================================
         function updateTruckComponents(affected) {
-            // EXACT ID MAPPING - Backend key → DOM element ID
+            // EXACT ID MAPPING - Backend key → ACTUAL VISUAL TRUCK PART GROUP
+            const COMPONENT_TO_GROUP_ID = {
+                'engine': 'engine-group',       // The actual cabin/engine SVG group
+                'hydraulic': 'hydraulic-group', // The actual dump bed SVG group
+                'chassis': 'chassis-group',     // The actual chassis SVG group
+                'wheels': 'wheels-group'        // The actual wheels SVG group
+            };
+            
             const COMPONENT_TO_ZONE_ID = {
                 'engine': 'engine-zone',
                 'hydraulic': 'hydraulic-zone',
@@ -1269,12 +1282,16 @@
                 'wheels': 'wheels-label'
             };
             
-            // STEP 1: Process each component with FORCED DOM updates
-            Object.keys(COMPONENT_TO_ZONE_ID).forEach(comp => {
+            // STEP 1: Process each component
+            Object.keys(COMPONENT_TO_GROUP_ID).forEach(comp => {
+                const groupId = COMPONENT_TO_GROUP_ID[comp];
                 const zoneId = COMPONENT_TO_ZONE_ID[comp];
                 const labelId = COMPONENT_TO_LABEL_ID[comp];
-                const zone = document.getElementById(zoneId);
-                const label = document.getElementById(labelId);
+                
+                const group = document.getElementById(groupId);  // ACTUAL VISUAL PART
+                const zone = document.getElementById(zoneId);    // Overlay zone
+                const label = document.getElementById(labelId);  // Floating label
+                
                 const hasAnomaly = affected && affected[comp] === true;
                 
                 // FORCE update floating label
@@ -1284,20 +1301,30 @@
                         : 'component-label component-normal';
                 }
                 
-                // FORCE update SVG zone with DIRECT CLASS MANIPULATION
+                // =====================================================
+                // KEY FIX: Apply SVG filter DIRECTLY to truck part group
+                // This makes the ACTUAL YELLOW PARTS glow red!
+                // =====================================================
+                if (group) {
+                    if (hasAnomaly) {
+                        // Apply red glow filter to the ACTUAL TRUCK PART
+                        group.style.filter = 'url(#glowRedPulse)';
+                        group.style.transition = 'filter 0.3s ease';
+                    } else {
+                        // Remove filter - show normal state
+                        group.style.filter = '';
+                    }
+                }
+                
+                // Also update overlay zone for additional visual feedback
                 if (zone) {
-                    // FIRST: Strip ALL state classes
                     zone.classList.remove('zone-normal', 'zone-fault', 'zone-warning');
-                    
-                    // THEN: Apply correct state
                     if (hasAnomaly) {
                         zone.classList.add('zone-fault');
-                        // BACKUP: Force inline style for maximum visibility
-                        zone.style.fill = 'rgba(255, 50, 50, 0.6)';
-                        zone.style.opacity = '0.9';
+                        zone.style.fill = 'rgba(255, 50, 50, 0.5)';
+                        zone.style.opacity = '0.8';
                     } else {
                         zone.classList.add('zone-normal');
-                        // BACKUP: Reset inline styles
                         zone.style.fill = '';
                         zone.style.opacity = '';
                     }
